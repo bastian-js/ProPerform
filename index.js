@@ -12,8 +12,6 @@ import { requestLogger } from "./logger.js";
 
 dotenv.config();
 
-app.set("trust proxy", true);
-
 const routeMap = new Map();
 
 const COLORS = {
@@ -103,6 +101,8 @@ function extractPrefixFromRegex(regexp) {
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+app.set("trust proxy", true);
 
 const allowedOrigins = [
   "http://localhost:5173",

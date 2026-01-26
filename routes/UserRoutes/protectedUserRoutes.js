@@ -1,6 +1,7 @@
 import express from "express";
 import { db } from "../../db.js";
 import { requireAuth } from "../../middleware/auth.js";
+import { createRateLimiter } from "../../middleware/rate.js";
 
 const router = express.Router();
 
@@ -77,74 +78,91 @@ const getUsers = async (req, res, role) => {
   }
 };
 
-router.get("/", requireAuth, async (req, res) => {
-  await getUsers(req, res, null);
-});
+router.get(
+  "/",
+  requireAuth,
+  createRateLimiter({ windowMs: 15 * 60 * 1000, max: 10 }),
+  async (req, res) => {
+    await getUsers(req, res, null);
+  },
+);
 
-router.get("/:role", requireAuth, async (req, res) => {
-  await getUsers(req, res, req.params.role);
-});
+router.get(
+  "/:role",
+  requireAuth,
+  createRateLimiter({ windowMs: 15 * 60 * 1000, max: 10 }),
+  async (req, res) => {
+    await getUsers(req, res, req.params.role);
+  },
+);
 
 // Separate Route für Statistiken
-router.get("/stats", requireAuth, async (req, res) => {
-  try {
-    const [[userStats]] = await db.execute(
-      `
+router.get(
+  "/stats",
+  requireAuth,
+  createRateLimiter({ windowMs: 15 * 60 * 1000, max: 10 }),
+  async (req, res) => {
+    try {
+      const [[userStats]] = await db.execute(
+        `
       SELECT
         SUM(role_id = ?) AS owners,
         SUM(role_id = ?) AS users
       FROM users
     `,
-      [ROLES.OWNER, ROLES.USER],
-    );
+        [ROLES.OWNER, ROLES.USER],
+      );
 
-    const [[trainerStats]] = await db.execute(
-      "SELECT COUNT(*) AS trainers FROM trainers",
-    );
+      const [[trainerStats]] = await db.execute(
+        "SELECT COUNT(*) AS trainers FROM trainers",
+      );
 
-    const total =
-      (parseInt(userStats.owners) || 0) +
-      (parseInt(userStats.users) || 0) +
-      (parseInt(trainerStats.trainers) || 0);
+      const total =
+        (parseInt(userStats.owners) || 0) +
+        (parseInt(userStats.users) || 0) +
+        (parseInt(trainerStats.trainers) || 0);
 
-    res.json({
-      stats: {
-        owners: parseInt(userStats.owners) || 0,
-        users: parseInt(userStats.users) || 0,
-        trainers: parseInt(trainerStats.trainers) || 0,
-        total: total,
-      },
-    });
-  } catch (err) {
-    console.error("Fehler beim Abrufen der Statistiken:", err);
-    res.status(500).json({
-      error: "Fehler beim Abrufen der Statistiken",
-    });
-  }
-});
-
-router.delete("/deleteUser/:uid", requireAuth, async (req, res) => {
-  const { uid } = req.params;
-
-  console.log(`Lösche Benutzer mit UID: ${uid}`);
-
-  try {
-    const [result] = await db.execute("DELETE FROM users WHERE uid = ?", [uid]);
-
-    if (result.affectedRows === 0) {
-      return res.status(404).json({ error: "Benutzer nicht gefunden" });
+      res.json({
+        stats: {
+          owners: parseInt(userStats.owners) || 0,
+          users: parseInt(userStats.users) || 0,
+          trainers: parseInt(trainerStats.trainers) || 0,
+          total: total,
+        },
+      });
+    } catch (err) {
+      console.error("Fehler beim Abrufen der Statistiken:", err);
+      res.status(500).json({
+        error: "Fehler beim Abrufen der Statistiken",
+      });
     }
+  },
+);
 
-    res.json({ message: "Benutzer erfolgreich gelöscht" });
-  } catch (error) {
-    console.error("Fehler beim Löschen des Benutzers:", error);
-    res.status(500).json({ error: "Fehler beim Löschen des Benutzers" });
-  }
-});
+router.delete(
+  "/deleteUser/:uid",
+  requireAuth,
+  createRateLimiter({ windowMs: 15 * 60 * 1000, max: 10 }),
+  async (req, res) => {
+    const { uid } = req.params;
 
-// Beispiel-Dashboard
-router.get("/dashboard", (req, res) => {
-  res.json({ message: `Willkommen im Dashboard, ${req.user.email}` });
-});
+    console.log(`Lösche Benutzer mit UID: ${uid}`);
+
+    try {
+      const [result] = await db.execute("DELETE FROM users WHERE uid = ?", [
+        uid,
+      ]);
+
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ error: "Benutzer nicht gefunden" });
+      }
+
+      res.json({ message: "Benutzer erfolgreich gelöscht" });
+    } catch (error) {
+      console.error("Fehler beim Löschen des Benutzers:", error);
+      res.status(500).json({ error: "Fehler beim Löschen des Benutzers" });
+    }
+  },
+);
 
 export default router;

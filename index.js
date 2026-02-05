@@ -137,6 +137,7 @@ app.use(requestLogger);
 app.use("/users", publicUserRoutes);
 app.use("/trainers", publicTrainerRoutes);
 app.use("/auth", publicAuthRoutes);
+app.use("/system", publicSystemRoutes);
 
 // Protected routes
 app.use("/users", protectedUserRoutes);

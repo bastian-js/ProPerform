@@ -73,7 +73,7 @@ router.post(
         ],
       );
 
-      return res.status(400).json({ status: "ok", eid: result.insertId });
+      return res.status(201).json({ status: "ok", eid: result.insertId });
     } catch (err) {
       console.error("create exercise failed: ", err);
       return res.status(500).json({ error: "internal server error" });

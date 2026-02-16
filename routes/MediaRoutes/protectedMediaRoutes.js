@@ -78,4 +78,78 @@ router.post(
   },
 );
 
+router.get("/all", requireAuth, requireRole("owner"), async (req, res) => {
+  try {
+    const [rows] = await db.query(
+      `
+        SELECT mid, type, filename, url, size, created_at
+        FROM media
+        ORDER BY created_at DESC
+      `,
+    );
+
+    return res.json({
+      count: rows.length,
+      media: rows,
+    });
+  } catch (err) {
+    console.error("fetch media failed:", err);
+    return res.status(500).json({ error: "internal server error" });
+  }
+});
+
+router.delete("/:mid", requireAuth, requireRole("owner"), async (req, res) => {
+  try {
+    const { mid } = req.params;
+
+    const [result] = await db.query(
+      `
+        DELETE FROM media
+        WHERE mid = ?
+      `,
+      [mid],
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: "media not found" });
+    }
+
+    return res.json({
+      status: "ok",
+      message: `media with id ${mid} deleted`,
+    });
+  } catch (err) {
+    console.error("delete media failed: ", err);
+    return res.status(500).json({ error: "internal server error" });
+  }
+});
+
+router.put("/:mid", requireAuth, requireRole("owner"), async (req, res) => {
+  try {
+    const { mid } = req.params;
+    const { filename, url } = req.body;
+
+    const [result] = await db.query(
+      `
+        UPDATE media
+        SET filename = ?, url = ?
+        WHERE mid = ?
+      `,
+      [filename, url, mid],
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: "media not found" });
+    }
+
+    return res.json({
+      status: "ok",
+      message: `media with id ${mid} updated`,
+    });
+  } catch (err) {
+    console.error("update media failed: ", err);
+    return res.status(500).json({ error: "internal server error" });
+  }
+});
+
 export default router;

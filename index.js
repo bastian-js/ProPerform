@@ -11,6 +11,7 @@ import publicAuthRoutes from "./routes/AuthRoutes/publicAuthRoutes.js";
 import weightLogRoutes from "./routes/UserRoutes/weightLogRoutes.js";
 import protectedExerciseRoutes from "./routes/ExerciseRoutes/protectedExerciseRoutes.js";
 import protectedMediaRoutes from "./routes/MediaRoutes/protectedMediaRoutes.js";
+import publicExercisesRoutes from "./routes/ExerciseRoutes/publicExerciseRoutes.js";
 
 import { requestLogger } from "./logger.js";
 
@@ -141,6 +142,7 @@ app.use("/users", publicUserRoutes);
 app.use("/trainers", publicTrainerRoutes);
 app.use("/auth", publicAuthRoutes);
 app.use("/system", publicSystemRoutes);
+app.use("/exercises", publicExercisesRoutes);
 
 // Protected routes
 app.use("/users", protectedUserRoutes);
@@ -219,6 +221,7 @@ app.listen(PORT, "0.0.0.0", () => {
   allRoutes.push(...extractRoutes(weightLogRoutes, "/logs", true));
   allRoutes.push(...extractRoutes(protectedExerciseRoutes, "/admin", true));
   allRoutes.push(...extractRoutes(protectedMediaRoutes, "/media", true));
+  allRoutes.push(...extractRoutes(publicExercisesRoutes, "/exercises", false));
 
   allRoutes.sort((a, b) => {
     if (a.path !== b.path) return a.path.localeCompare(b.path);

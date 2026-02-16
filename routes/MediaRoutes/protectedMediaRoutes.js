@@ -2,6 +2,8 @@ import express from "express";
 
 import { upload } from "../../functions/multerMedia.js";
 
+import { db } from "../../db.js";
+
 import { requireRole } from "../../middleware/role.js";
 import { createRateLimiter } from "../../middleware/rate.js";
 
@@ -15,7 +17,7 @@ router.post(
   requireAuth,
   requireRole("owner"),
   createRateLimiter({ windowMs: 15 * 60 * 1000, max: 30 }),
-  (req, res) => {
+  async (req, res) => {
     try {
       if (!req.file) {
         return res.status(400).json({
@@ -30,10 +32,32 @@ router.post(
       const url =
         "https://media.properform.app/" + folder + "/" + req.file.filename;
 
+      const fileSize = req.file.size;
+
+      const fileType = req.file.mimetype.startsWith("image/")
+        ? "image"
+        : "video";
+
+      const fileName = req.file.filename;
+
+      const [result] = await db.query(
+        `
+          INSERT INTO media (
+            type,
+            filename,
+            url,
+            size,
+          )
+          VALUES (?, ?, ?, ?)
+        `,
+        [fileType, fileName, url, fileSize],
+      );
+
       res.json({
         message: "File uploaded successfully",
         filename: req.file.filename,
         url,
+        mid: result.mid,
       });
     } catch (err) {
       res.status(500).json({

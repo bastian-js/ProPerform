@@ -1,7 +1,8 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
-import { mountRoutes, routeRouters } from "./routes/index.js";
+import listEndpoints from "express-list-endpoints";
+import { mountRoutes, routeMounts } from "./routes/index.js";
 
 import { requestLogger } from "./logger.js";
 
@@ -60,40 +61,25 @@ function box(lines = []) {
   console.log(BOX_COLOR + "╚" + "═".repeat(BOX_WIDTH) + "╝" + COLORS.reset);
 }
 
-function extractRoutes(router, prefix = "", isProtected = false) {
+function getRoutesFromMounts(mounts) {
   const routes = [];
 
-  router.stack?.forEach((middleware) => {
-    if (middleware.route) {
-      const methods = Object.keys(middleware.route.methods);
-      methods.forEach((method) => {
+  mounts.forEach(({ router, path: basePath, protected: isProtected }) => {
+    const endpoints = listEndpoints(router);
+
+    endpoints.forEach((endpoint) => {
+      const fullPath = basePath + (endpoint.path === "/" ? "" : endpoint.path);
+      endpoint.methods.forEach((method) => {
         routes.push({
           method: method.toUpperCase(),
-          path:
-            prefix +
-            (middleware.route.path === "/" ? "" : middleware.route.path),
+          path: fullPath,
           protected: isProtected,
         });
       });
-    } else if (middleware.handle?.stack) {
-      const nestedPrefix = middleware.regexp
-        ? extractPrefixFromRegex(middleware.regexp)
-        : "";
-      const nestedRoutes = extractRoutes(
-        middleware.handle,
-        prefix + nestedPrefix,
-        isProtected,
-      );
-      routes.push(...nestedRoutes);
-    }
+    });
   });
 
   return routes;
-}
-
-function extractPrefixFromRegex(regexp) {
-  const match = regexp.source.match(/^\\\/(\w+)/);
-  return match ? "/" + match[1] : "";
 }
 
 const app = express();
@@ -209,37 +195,7 @@ app.listen(PORT, "0.0.0.0", () => {
 
   console.log(`\n${COLORS.blue}📋 REGISTERED ROUTES:${COLORS.reset}\n`);
 
-  const allRoutes = [];
-
-  allRoutes.push(
-    ...extractRoutes(routeRouters.publicUserRoutes, "/users", false),
-  );
-  allRoutes.push(
-    ...extractRoutes(routeRouters.publicTrainerRoutes, "/trainers", false),
-  );
-  allRoutes.push(...extractRoutes(routeRouters.authRoutes, "/auth", false));
-  allRoutes.push(
-    ...extractRoutes(routeRouters.publicSystemRoutes, "/system", false),
-  );
-  allRoutes.push(
-    ...extractRoutes(routeRouters.protectedUserRoutes, "/users", true),
-  );
-  allRoutes.push(
-    ...extractRoutes(routeRouters.protectedSystemRoutes, "/system", true),
-  );
-  allRoutes.push(
-    ...extractRoutes(routeRouters.privateTrainerRoutes, "/trainers", true),
-  );
-  allRoutes.push(...extractRoutes(routeRouters.weightLogRoutes, "/logs", true));
-  allRoutes.push(
-    ...extractRoutes(routeRouters.protectedExerciseRoutes, "/admin", true),
-  );
-  allRoutes.push(
-    ...extractRoutes(routeRouters.protectedMediaRoutes, "/media", true),
-  );
-  allRoutes.push(
-    ...extractRoutes(routeRouters.publicExercisesRoutes, "/exercises", false),
-  );
+  const allRoutes = getRoutesFromMounts(routeMounts);
 
   allRoutes.sort((a, b) => {
     if (a.path !== b.path) return a.path.localeCompare(b.path);

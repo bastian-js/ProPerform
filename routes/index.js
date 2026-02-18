@@ -10,35 +10,24 @@ import protectedExerciseRoutes from "./ExerciseRoutes/protected/index.js";
 import publicExercisesRoutes from "./ExerciseRoutes/publicExerciseRoutes.js";
 import protectedMediaRoutes from "./MediaRoutes/protected/index.js";
 
-const routeRouters = {
-  publicUserRoutes,
-  protectedUserRoutes,
-  publicSystemRoutes,
-  protectedSystemRoutes,
-  publicTrainerRoutes,
-  privateTrainerRoutes,
-  authRoutes,
-  weightLogRoutes,
-  protectedExerciseRoutes,
-  publicExercisesRoutes,
-  protectedMediaRoutes,
-};
+const routeMounts = [
+  { router: publicUserRoutes, path: "/users", protected: false },
+  { router: publicTrainerRoutes, path: "/trainers", protected: false },
+  { router: authRoutes, path: "/auth", protected: false },
+  { router: publicSystemRoutes, path: "/system", protected: false },
+  { router: publicExercisesRoutes, path: "/exercises", protected: false },
+  { router: protectedUserRoutes, path: "/users", protected: true },
+  { router: protectedSystemRoutes, path: "/system", protected: true },
+  { router: privateTrainerRoutes, path: "/trainers", protected: true },
+  { router: weightLogRoutes, path: "/logs", protected: true },
+  { router: protectedExerciseRoutes, path: "/admin", protected: true },
+  { router: protectedMediaRoutes, path: "/media", protected: true },
+];
 
 const mountRoutes = (app) => {
-  // Public routes
-  app.use("/users", publicUserRoutes);
-  app.use("/trainers", publicTrainerRoutes);
-  app.use("/auth", authRoutes);
-  app.use("/system", publicSystemRoutes);
-  app.use("/exercises", publicExercisesRoutes);
-
-  // Protected routes
-  app.use("/users", protectedUserRoutes);
-  app.use("/system", protectedSystemRoutes);
-  app.use("/trainers", privateTrainerRoutes);
-  app.use("/logs", weightLogRoutes);
-  app.use("/admin", protectedExerciseRoutes);
-  app.use("/media", protectedMediaRoutes);
+  routeMounts.forEach(({ router, path }) => {
+    app.use(path, router);
+  });
 };
 
-export { routeRouters, mountRoutes };
+export { routeMounts, mountRoutes };

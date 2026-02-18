@@ -3,90 +3,125 @@ import mysql from "mysql2/promise";
 import { db } from "../../db.js";
 import { requireAuth } from "../../middleware/auth.js";
 import { generateTrainerCode } from "../../functions/TrainerFunctions.js";
+import bcrypt from "bcryptjs";
+import dotenv from "dotenv";
 import { requireRole } from "../../middleware/role.js";
 import { createRateLimiter } from "../../middleware/rate.js";
 
+dotenv.config();
+
+const SALT_ROUNDS = parseInt(process.env.SALT_ROUNDS) || 10;
+
 const router = express.Router();
 
-router.patch(
-  "/:id/regenerateCode",
-  requireRole("trainer"),
-  createRateLimiter({ windowMs: 15 * 60 * 1000, max: 5 }),
+router.post(
+  "/createTrainer",
+  requireAuth,
+  requireRole("owner"),
+  createRateLimiter({ windowMs: 15 * 60 * 1000, max: 10 }),
   async (req, res) => {
-    const { id } = req.params;
+    const { firstname, lastname, password, birthdate, email, phone_number } =
+      req.body;
+
+    if (
+      !firstname ||
+      !lastname ||
+      !email ||
+      !phone_number ||
+      !birthdate ||
+      !password
+    ) {
+      return res.status(400).json({ error: "Pflichtfelder fehlen" });
+    }
 
     try {
-      const newCode = generateTrainerCode();
+      const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
+
+      const trainerCode = generateTrainerCode();
 
       const [result] = await db.execute(
-        "UPDATE trainers SET invite_code = ? WHERE tid = ?",
-        [newCode, id],
+        "INSERT INTO trainers (firstname, lastname, birthdate, email, password_hash, phone_number, invite_code) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        [
+          firstname,
+          lastname,
+          birthdate,
+          email,
+          hashedPassword,
+          phone_number,
+          trainerCode,
+        ],
       );
-      if (result.affectedRows === 0) {
-        return res.status(404).json({ error: "Trainer nicht gefunden." });
-      }
-
-      res.json({
-        message: "Einladungscode erfolgreich aktualisiert.",
-        newCode,
+      res.status(201).json({
+        message: `Trainer ${firstname} ${lastname} erstellt.`,
+        trainerId: result.insertId,
+        invite_code: trainerCode,
       });
     } catch (error) {
+      if (error.code === "ER_DUP_ENTRY") {
+        return res
+          .status(409)
+          .json({ error: "Ein Trainer mit dieser E-Mail existiert bereits." });
+      }
+
       res.status(500).json({ error: error.message });
     }
   },
 );
 
 router.post(
-  "/link-athlete",
-  createRateLimiter({ windowMs: 15 * 60 * 1000, max: 5 }),
+  "/verify-code",
+  requireAuth,
+  createRateLimiter({ windowMs: 15 * 60 * 1000, max: 10 }),
   async (req, res) => {
-    const { invite_code, athlete_id } = req.body;
+    const { invite_code } = req.body;
 
     if (!invite_code || invite_code.trim() === "") {
       return res.status(400).json({ error: "Einladungscode fehlt." });
     }
 
-    if (!athlete_id) {
-      return res.status(400).json({ error: "Athleten-ID fehlt." });
-    }
-
     try {
-      // Trainer anhand Code finden
-      const [trainerRows] = await db.execute(
-        "SELECT tid FROM trainers WHERE invite_code = ?",
+      const [rows] = await db.execute(
+        "SELECT tid, firstname, lastname, email, invite_code FROM trainers WHERE invite_code = ?",
         [invite_code.trim()],
       );
 
-      if (trainerRows.length === 0) {
+      if (rows.length === 0) {
         return res.status(404).json({ error: "Ungültiger Einladungscode." });
       }
 
-      const trainerId = trainerRows[0].tid;
-
-      // Prüfen, ob Athlet schon einen Trainer hat
-      const [existing] = await db.execute(
-        "SELECT * FROM trainer_athletes WHERE athlete_uid = ?",
-        [athlete_id],
-      );
-
-      if (existing.length > 0) {
-        return res
-          .status(409)
-          .json({ error: "Athlet ist bereits einem Trainer zugewiesen." });
-      }
-
-      await db.execute(
-        "INSERT INTO trainer_athletes (tid, athlete_uid, assigned_date) VALUES (?, ?, CURDATE())",
-        [trainerId, athlete_id],
-      );
-
       res.status(200).json({
-        message: "Athlet erfolgreich mit Trainer verknüpft.",
-        trainer_id: trainerId,
+        valid: true,
+        trainer: rows[0],
       });
     } catch (error) {
-      console.error("Fehler bei /link-athlete:", error);
+      console.error("Fehler bei /verify-code:", error);
       res.status(500).json({ error: "Interner Serverfehler." });
+    }
+  },
+);
+
+router.delete(
+  "/deleteTrainer/:tid",
+  requireAuth,
+  requireRole("owner"),
+  createRateLimiter({ windowMs: 15 * 60 * 1000, max: 5 }),
+  async (req, res) => {
+    const { tid } = req.params;
+
+    try {
+      const [result] = await db.execute("DELETE FROM trainers WHERE tid = ?", [
+        tid,
+      ]);
+
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ error: "Trainer nicht gefunden." });
+      }
+
+      res
+        .status(200)
+        .json({ message: `Trainer mit ID ${tid} wurde gelöscht.` });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
     }
   },
 );

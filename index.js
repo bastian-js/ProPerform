@@ -1,17 +1,7 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
-import publicUserRoutes from "./routes/UserRoutes/publicUserRoutes.js";
-import protectedUserRoutes from "./routes/UserRoutes/protectedUserRoutes.js";
-import publicSystemRoutes from "./routes/SystemRoutes/publicSystemRoutes.js";
-import protectedSystemRoutes from "./routes/SystemRoutes/ProtectedSystemRoutes.js";
-import publicTrainerRoutes from "./routes/TrainerRoutes/publicTrainerRoutes.js";
-import privateTrainerRoutes from "./routes/TrainerRoutes/privateTrainerRoutes.js";
-import publicAuthRoutes from "./routes/AuthRoutes/publicAuthRoutes.js";
-import weightLogRoutes from "./routes/UserRoutes/weightLogRoutes.js";
-import protectedExerciseRoutes from "./routes/ExerciseRoutes/protectedExerciseRoutes.js";
-import protectedMediaRoutes from "./routes/MediaRoutes/protectedMediaRoutes.js";
-import publicExercisesRoutes from "./routes/ExerciseRoutes/publicExerciseRoutes.js";
+import { mountRoutes, routeRouters } from "./routes/index.js";
 
 import { requestLogger } from "./logger.js";
 
@@ -85,8 +75,10 @@ function extractRoutes(router, prefix = "", isProtected = false) {
           protected: isProtected,
         });
       });
-    } else if (middleware.name === "router" && middleware.regexp) {
-      const nestedPrefix = extractPrefixFromRegex(middleware.regexp);
+    } else if (middleware.handle?.stack) {
+      const nestedPrefix = middleware.regexp
+        ? extractPrefixFromRegex(middleware.regexp)
+        : "";
       const nestedRoutes = extractRoutes(
         middleware.handle,
         prefix + nestedPrefix,
@@ -137,20 +129,7 @@ app.use(express.json());
 
 app.use(requestLogger);
 
-// Public routes
-app.use("/users", publicUserRoutes);
-app.use("/trainers", publicTrainerRoutes);
-app.use("/auth", publicAuthRoutes);
-app.use("/system", publicSystemRoutes);
-app.use("/exercises", publicExercisesRoutes);
-
-// Protected routes
-app.use("/users", protectedUserRoutes);
-app.use("/system", protectedSystemRoutes);
-app.use("/trainers", privateTrainerRoutes);
-app.use("/logs", weightLogRoutes);
-app.use("/admin", protectedExerciseRoutes);
-app.use("/media", protectedMediaRoutes);
+mountRoutes(app);
 
 app.get("/", (req, res) => {
   res.json({
@@ -232,16 +211,35 @@ app.listen(PORT, "0.0.0.0", () => {
 
   const allRoutes = [];
 
-  allRoutes.push(...extractRoutes(publicUserRoutes, "/users", false));
-  allRoutes.push(...extractRoutes(publicTrainerRoutes, "/trainers", false));
-  allRoutes.push(...extractRoutes(publicAuthRoutes, "/auth", false));
-  allRoutes.push(...extractRoutes(protectedUserRoutes, "/users", true));
-  allRoutes.push(...extractRoutes(protectedSystemRoutes, "/system", true));
-  allRoutes.push(...extractRoutes(privateTrainerRoutes, "/trainers", true));
-  allRoutes.push(...extractRoutes(weightLogRoutes, "/logs", true));
-  allRoutes.push(...extractRoutes(protectedExerciseRoutes, "/admin", true));
-  allRoutes.push(...extractRoutes(protectedMediaRoutes, "/media", true));
-  allRoutes.push(...extractRoutes(publicExercisesRoutes, "/exercises", false));
+  allRoutes.push(
+    ...extractRoutes(routeRouters.publicUserRoutes, "/users", false),
+  );
+  allRoutes.push(
+    ...extractRoutes(routeRouters.publicTrainerRoutes, "/trainers", false),
+  );
+  allRoutes.push(...extractRoutes(routeRouters.authRoutes, "/auth", false));
+  allRoutes.push(
+    ...extractRoutes(routeRouters.publicSystemRoutes, "/system", false),
+  );
+  allRoutes.push(
+    ...extractRoutes(routeRouters.protectedUserRoutes, "/users", true),
+  );
+  allRoutes.push(
+    ...extractRoutes(routeRouters.protectedSystemRoutes, "/system", true),
+  );
+  allRoutes.push(
+    ...extractRoutes(routeRouters.privateTrainerRoutes, "/trainers", true),
+  );
+  allRoutes.push(...extractRoutes(routeRouters.weightLogRoutes, "/logs", true));
+  allRoutes.push(
+    ...extractRoutes(routeRouters.protectedExerciseRoutes, "/admin", true),
+  );
+  allRoutes.push(
+    ...extractRoutes(routeRouters.protectedMediaRoutes, "/media", true),
+  );
+  allRoutes.push(
+    ...extractRoutes(routeRouters.publicExercisesRoutes, "/exercises", false),
+  );
 
   allRoutes.sort((a, b) => {
     if (a.path !== b.path) return a.path.localeCompare(b.path);

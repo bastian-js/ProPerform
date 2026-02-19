@@ -9,7 +9,7 @@ const router = express.Router();
 
 dotenv.config();
 
-const SALT_ROUNDS = process.env.SALT_ROUNDS;
+const SALT_ROUNDS = Number(process.env.SALT_ROUNDS) || 10;
 
 router.post("/check-verification-code", async (req, res) => {
   const { email, code } = req.body;
@@ -179,30 +179,26 @@ If you did not request this code, you can safely ignore this email.
   }
 });
 
-
 router.post("/reset-password", async (req, res) => {
   const { email } = req.body;
 
   if (!email) {
     return res.status(400).json({
-      error: "email required."
+      error: "email required.",
     });
   }
 
   try {
     const [rows] = await db.query(
       `SELECT firstname FROM users WHERE email = ?`,
-      [email]
+      [email],
     );
 
     // ✅ Kein Email Enumeration Leak
     const firstname = rows.length ? rows[0].firstname : "there";
 
     // ✅ Alte Tokens löschen
-    await db.query(
-      `DELETE FROM password_resets WHERE email = ?`,
-      [email]
-    );
+    await db.query(`DELETE FROM password_resets WHERE email = ?`, [email]);
 
     // ✅ Neuer Token
     const rawToken = crypto.randomBytes(32).toString("hex");
@@ -218,7 +214,7 @@ router.post("/reset-password", async (req, res) => {
     await db.query(
       `INSERT INTO password_resets (email, token, expires_at)
        VALUES (?, ?, ?)`,
-      [email, hashedToken, expires]
+      [email, hashedToken, expires],
     );
 
     const resetLink = `https://account.properform.app/reset-password/${rawToken}`;
@@ -250,22 +246,20 @@ If you did not request this reset, simply ignore this email.
         <p>You requested a password reset.</p>
         <a href="${resetLink}">Reset Password</a>
         <p>This link is valid for 15 minutes.</p>
-      `
+      `,
     });
 
     // ✅ Immer gleiche Antwort → Security Best Practice
     return res.status(200).json({
-      message: "If an account exists, a reset email has been sent."
+      message: "If an account exists, a reset email has been sent.",
     });
-
   } catch (err) {
     return res.status(500).json({
       error: "failed to send reset email.",
-      details: err.message
+      details: err.message,
     });
   }
 });
-
 
 router.post("/reset-password/:token", async (req, res) => {
   const { token } = req.params;

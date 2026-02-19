@@ -9,7 +9,7 @@ import { createRateLimiter } from "../../../middleware/rate.js";
 
 const router = express.Router();
 
-const saltRounds = 10;
+const saltRounds = Number(process.env.SALT_ROUNDS) || 10;
 
 router.post(
   "/register",

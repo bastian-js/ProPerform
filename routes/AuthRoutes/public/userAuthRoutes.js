@@ -27,6 +27,7 @@ router.post(
       fitness_level,
       training_frequency,
       primary_goal,
+      stayLoggedIn,
     } = req.body;
 
     if (
@@ -187,8 +188,13 @@ Falls du dich nicht registriert hast, kannst du diese E-Mail ignorieren.
         });
       }
 
+      const token = jwt.sign({ uid: user.uid }, process.env.JWT_SECRET, {
+        expiresIn: stayLoggedIn ? "60d" : "3d",
+      });
+
       res.status(201).json({
         message: "user successfully created.",
+        token,
         uid: result.insertId,
       });
     } catch (error) {

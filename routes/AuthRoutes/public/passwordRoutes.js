@@ -2,7 +2,7 @@ import express from "express";
 import bcrypt from "bcrypt";
 import crypto from "crypto";
 import { db } from "../../../db.js";
-import { mailer } from "../../../mailer.js";
+import { mailer } from "../../../functions/mailer.js";
 
 const router = express.Router();
 

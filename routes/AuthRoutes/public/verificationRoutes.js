@@ -2,8 +2,13 @@ import express from "express";
 import crypto from "crypto";
 import { db } from "../../../db.js";
 import { mailer } from "../../../functions/mailer.js";
+import dotenv from "dotenv";
 
 const router = express.Router();
+
+dotenv.config();
+
+const SALT_ROUNDS = process.env.SALT_ROUNDS;
 
 router.post("/check-verification-code", async (req, res) => {
   const { email, code } = req.body;
@@ -169,6 +174,60 @@ If you did not request this code, you can safely ignore this email.
   } catch (err) {
     return res.status(500).json({
       error: "failed to resend verification code.",
+    });
+  }
+});
+
+router.post("/reset-password/:token", async (req, res) => {
+  const { token } = req.params;
+  const { password } = req.body;
+
+  if (!password) {
+    return res.status(400).json({ message: "password is required." });
+  }
+
+  if (password.length < 8) {
+    return res.status(400).json({
+      message: "Password must be at least 8 characters.",
+    });
+  }
+
+  try {
+    const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
+
+    const [rows] = await db.query(
+      `SELECT * FROM password_resets WHERE token = ?`,
+      [hashedToken],
+    );
+
+    if (!rows.length) {
+      return res.status(400).json({ message: "invalid token." });
+    }
+
+    const reset = rows[0];
+
+    if (new Date(reset.expires_at) < new Date()) {
+      return res.status(400).json({ message: "token expired." });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
+
+    await db.query(`UPDATE users SET password = ? WHERE email = ?`, [
+      hashedPassword,
+      reset.email,
+    ]);
+
+    await db.query(`DELETE FROM password_resets WHERE email = ?`, [
+      reset.email,
+    ]);
+
+    return res.status(200).json({
+      message: "password updated successfully.",
+    });
+  } catch (err) {
+    return res.status(500).json({
+      message: "failed to reset password",
+      error: err.message,
     });
   }
 });

@@ -5,6 +5,7 @@ import jwt from "jsonwebtoken";
 
 import { requireRole } from "../../../middleware/role.js";
 import { createRateLimiter } from "../../../middleware/rate.js";
+import { requireAuth } from "../../../middleware/auth.js";
 
 const router = express.Router();
 
@@ -13,6 +14,7 @@ const saltRounds = 10;
 router.post(
   "/admin/register",
   createRateLimiter({ windowMs: 15 * 60 * 1000, max: 5 }),
+  requireAuth,
   requireRole("owner"),
   async (req, res) => {
     const { firstname, birthdate, email, password_hash } = req.body;

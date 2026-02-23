@@ -2,7 +2,7 @@ import express from "express";
 import mysql from "mysql2/promise";
 import { db } from "../../db.js";
 import { requireAuth } from "../../middleware/auth.js";
-import { generateTrainerCode } from "../../functions/TrainerFunctions.js";
+import { generateTrainerCode } from "../../helpers/TrainerFunctions.js";
 import bcrypt from "bcryptjs";
 import dotenv from "dotenv";
 import { requireRole } from "../../middleware/role.js";

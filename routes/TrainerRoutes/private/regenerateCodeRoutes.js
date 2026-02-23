@@ -1,6 +1,6 @@
 import express from "express";
 import { db } from "../../../db.js";
-import { generateTrainerCode } from "../../../functions/TrainerFunctions.js";
+import { generateTrainerCode } from "../../../helpers/TrainerFunctions.js";
 import { requireRole } from "../../../middleware/role.js";
 import { createRateLimiter } from "../../../middleware/rate.js";
 

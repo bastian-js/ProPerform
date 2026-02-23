@@ -2,7 +2,7 @@ import express from "express";
 import bcrypt from "bcrypt";
 import crypto from "crypto";
 import { db } from "../../../db.js";
-import { mailer } from "../../../functions/mailer.js";
+import { mailer } from "../../../helpers/mailer.js";
 
 const router = express.Router();
 
@@ -50,18 +50,18 @@ router.post("/reset-password", async (req, res) => {
       subject: "Reset your password",
 
       text: `
-Hallo ${firstname},
+Hi ${firstname},
 
-du hast ein Zurücksetzen deines Passworts für dein ProPerform-Konto angefordert.
+you requested a password reset for your ProPerform account.
 
-Setze dein Passwort hier zurück:
+Reset your password here:
 ${resetLink}
 
-Wichtig: Dieser Link ist 15 Minuten gültig.
+Important: This link is valid for 15 minutes.
 
-Falls du diese Anfrage nicht gestellt hast, kannst du diese E-Mail einfach ignorieren.
+If you did not request this, you can safely ignore this email.
 
-– Das ProPerform-Team
+– The ProPerform Team
 properform.app
 `,
 
@@ -89,8 +89,6 @@ properform.app
         border: 1px solid rgba(255,255,255,0.07);
         overflow: hidden;
       }
-
-      /* Header */
       .header {
         padding: 36px 36px 28px;
         border-bottom: 1px solid rgba(255,255,255,0.06);
@@ -112,8 +110,6 @@ properform.app
         color: rgba(255,255,255,0.9);
         letter-spacing: -0.01em;
       }
-
-      /* Content */
       .content {
         padding: 36px;
       }
@@ -130,8 +126,6 @@ properform.app
         line-height: 1.65;
         margin: 0 0 32px 0;
       }
-
-      /* CTA Button */
       .btn-wrap {
         margin: 0 0 32px 0;
       }
@@ -146,8 +140,6 @@ properform.app
         border-radius: 10px;
         letter-spacing: -0.01em;
       }
-
-      /* Link fallback */
       .link-fallback {
         margin: 0 0 28px 0;
       }
@@ -164,8 +156,6 @@ properform.app
         word-break: break-all;
         line-height: 1.5;
       }
-
-      /* Expiry notice */
       .notice {
         background: rgba(31,58,138,0.08);
         border: 1px solid rgba(31,58,138,0.2);
@@ -176,8 +166,6 @@ properform.app
         line-height: 1.55;
       }
       .notice strong { color: rgba(255,255,255,0.65); }
-
-      /* Footer */
       .footer {
         padding: 20px 36px;
         border-top: 1px solid rgba(255,255,255,0.06);
@@ -198,41 +186,38 @@ properform.app
     <div class="container">
       <div class="card">
 
-        <!-- Header -->
         <div class="header">
           <span class="dot"></span>
           <span class="brand">ProPerform</span>
         </div>
 
-        <!-- Content -->
         <div class="content">
-          <p class="greeting">Hallo ${firstname},</p>
+          <p class="greeting">Hi ${firstname},</p>
           <p class="body-text">
-            du hast ein Zurücksetzen deines Passworts für dein ProPerform-Konto angefordert.
-            Klicke auf den Button unten, um ein neues Passwort festzulegen.
+            you requested a password reset for your ProPerform account.
+            Click the button below to set a new password.
           </p>
 
           <div class="btn-wrap">
-            <a href="${resetLink}" class="btn">Passwort zurücksetzen</a>
+            <a href="${resetLink}" class="btn">Reset password</a>
           </div>
 
           <div class="link-fallback">
-            <p class="link-label">Oder kopiere diesen Link</p>
+            <p class="link-label">Or copy this link</p>
             <p class="link-url">${resetLink}</p>
           </div>
 
           <div class="notice">
-            <strong>⏱ Dieser Link ist 15 Minuten gültig.</strong><br>
-            Falls du diese Anfrage nicht gestellt hast, kannst du diese E-Mail einfach ignorieren.
+            <strong>⏱ This link is valid for 15 minutes.</strong><br>
+            If you did not request this, you can safely ignore this email.
           </div>
         </div>
 
-        <!-- Footer -->
         <div class="footer">
           <p>
             <strong style="color:rgba(255,255,255,0.3)">ProPerform</strong> &nbsp;·&nbsp;
             <a href="https://properform.app">properform.app</a><br>
-            Dies ist eine automatisch generierte E-Mail. Bitte antworte nicht auf diese Nachricht.
+            This is an automatically generated email. Please do not reply to this message.
           </p>
         </div>
 

@@ -1,6 +1,6 @@
 import express from "express";
 
-import { upload } from "../../../functions/multerMedia.js";
+import { upload } from "../../../helpers/multerMedia.js";
 
 import { db } from "../../../db.js";
 

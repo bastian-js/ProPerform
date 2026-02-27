@@ -172,17 +172,26 @@ router.post("/login", async (req, res) => {
 
     if (!valid) return res.status(401).json({ error: "invalid credentials." });
 
-    const token = jwt.sign({ uid: user.uid }, process.env.JWT_SECRET, {
-      expiresIn: stayLoggedIn ? "60d" : "3d",
-    });
+    const userRole = user.role_id === 1 ? "owner" : "user";
+
+    const token = jwt.sign(
+      { uid: user.uid, role: userRole },
+      process.env.JWT_SECRET,
+      {
+        expiresIn: stayLoggedIn ? "60d" : "3d",
+      },
+    );
 
     res.json({
       message: "login successful.",
       token,
       uid: user.uid,
+      role: userRole,
     });
-  } catch {
-    res.status(500).json({ error: "internal server error." });
+  } catch (error) {
+    res
+      .status(500)
+      .json({ message: "internal server error.", error: error.message });
   }
 });
 

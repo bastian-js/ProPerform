@@ -152,6 +152,8 @@ router.post("/login", async (req, res) => {
     });
   }
 
+  email = email.trim().toLowerCase();
+
   if (stayLoggedIn !== undefined && typeof stayLoggedIn !== "boolean") {
     return res.status(400).json({
       error: "invalid value for stayloggedin.",
@@ -172,10 +174,13 @@ router.post("/login", async (req, res) => {
 
     if (!valid) return res.status(401).json({ error: "invalid credentials." });
 
-    const [response] = await db.query(
-      "UPDATE users SET last_login = NOW() WHERE uid = ?",
-      [user.uid],
-    );
+    if (!user.email_verified) {
+      return res.status(403).json({ error: "email not verified." });
+    }
+
+    await db.query("UPDATE users SET last_login = NOW() WHERE uid = ?", [
+      user.uid,
+    ]);
 
     const userRole = user.role_id === 1 ? "owner" : "user";
 

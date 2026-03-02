@@ -2,29 +2,34 @@ name: Deploy Dashboard
 on:
   push:
     paths:
-      - "dashboard-frontend/**"
+      - "dashboard/**"
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v4
+
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 20
+
       - name: Install dependencies
-        working-directory: dashboard-frontend
+        working-directory: dashboard
         run: npm ci
+
       - name: Build dashboard
-        working-directory: dashboard-frontend
+        working-directory: dashboard
         run: npm run build
+
       - name: Upload to server
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.DOCS_SSH_HOST }}
           username: ${{ secrets.DOCS_SSH_USER }}
           key: ${{ secrets.DOCS_SSH_KEY }}
-          source: "dashboard-frontend/dist/*"
+          source: "dashboard/dist/*"
           target: ${{ secrets.DASH_PATH }}
           strip_components: 2

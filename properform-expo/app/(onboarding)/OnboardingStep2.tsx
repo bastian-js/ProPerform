@@ -81,10 +81,7 @@ export default function OnboardingStep2() {
       router.push("../(onboarding)/OnboardingStep3");
     } catch (error: any) {
       console.error(error);
-      Alert.alert(
-        "Fehler",
-        error.response?.data?.error || "Speichern fehlgeschlagen.",
-      );
+      Alert.alert("Fehler", "Speichern fehlgeschlagen.");
     }
   };
 

@@ -55,7 +55,7 @@ export default function LoginScreen() {
 
       router.replace("/(tabs)/HomeScreen");
     } catch (err: any) {
-      setError(err.response?.data?.message || "Login fehlgeschlagen.");
+      setError(err.response?.data?.error || "Login fehlgeschlagen.");
     }
   };
 

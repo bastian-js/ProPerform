@@ -1,4 +1,4 @@
-import React, { use, useEffect } from "react";
+import React, { useEffect } from "react";
 import {
   View,
   Text,
@@ -43,8 +43,12 @@ export default function ProfileScreen() {
         email: user?.email,
       });
       Alert.alert("Erfolg", "Wir haben dir einen Link per Email geschickt!");
-    } catch (error) {
-      Alert.alert("Fehler", "Etwas ist schiefgelaufen, versuch es nochmal.");
+    } catch (err: any) {
+      Alert.alert(
+        "Fehler",
+        err.response?.data?.error ||
+          "Etwas ist schiefgelaufen, versuch es nochmal.",
+      );
     }
   };
 
@@ -55,8 +59,8 @@ export default function ProfileScreen() {
       console.log("Logout erfolgreich");
 
       router.replace("../(onboarding)/OnboardingScreen");
-    } catch (error) {
-      console.log("Fehler Logout", error);
+    } catch {
+      console.log("Fehler Logout", "Logout fehgeschlagen");
     }
   };
 

@@ -3,7 +3,6 @@ import {
   View,
   Text,
   StyleSheet,
-  Alert,
   Keyboard,
   TouchableWithoutFeedback,
   ScrollView,
@@ -61,9 +60,10 @@ export default function VerifyEmailScreen() {
       await AsyncStorage.setItem("onboardingFinished", "true");
       finishOnboarding();
       router.replace("../(tabs)/HomeScreen");
-    } catch (error: any) {
-      setError("Bitte gib den richtigen Code ein.");
-      Alert.alert("Verifikation fehlgeschlagen");
+    } catch (err: any) {
+      setError(
+        err.response?.data?.error || "Bitte gib den richtigen Code ein.",
+      );
     }
   };
 

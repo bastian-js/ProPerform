@@ -31,9 +31,11 @@ export default function LoginScreen() {
   const [error, setError] = React.useState<string | null>(null);
   const [forgotPasswordVisible, setForgotPasswordVisible] =
     React.useState(false);
+  const [loading, setLoading] = React.useState(false);
 
   const handleLogin = async () => {
     try {
+      setLoading(true);
       setError(null);
 
       const response = await axios.post(
@@ -56,6 +58,8 @@ export default function LoginScreen() {
       router.replace("/(tabs)/HomeScreen");
     } catch (err: any) {
       setError(err.response?.data?.error || "Login fehlgeschlagen.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -130,8 +134,9 @@ export default function LoginScreen() {
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={styles.arrowButton}
+                style={[styles.arrowButton, loading && { opacity: 0.5 }]}
                 onPress={handleLogin}
+                disabled={loading}
               >
                 <Icon name="arrow-forward" size={24} color={colors.white} />
               </TouchableOpacity>

@@ -1,6 +1,5 @@
 import { Redirect } from "expo-router";
-import { useContext, useEffect, useState } from "react";
-import { OnboardingContext } from "@/src/context/OnboardingContext";
+import { useEffect, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const DEV_MODE_STATUS = true; // false setzen für normal, true dev mode

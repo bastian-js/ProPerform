@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import {
   ScrollView,
   Keyboard,
@@ -65,7 +65,6 @@ export default function OnboardingStep4() {
     const safeHeight = heightNum as number;
     const safeWeight = weightNum as number;
 
-
     try {
       await AsyncStorage.multiSet([
         ["onboarding_height", safeHeight.toString()],
@@ -85,7 +84,7 @@ export default function OnboardingStep4() {
 
   const handleBack = () => {
     router.back();
-  }
+  };
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>

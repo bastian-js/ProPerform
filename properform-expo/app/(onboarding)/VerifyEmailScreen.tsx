@@ -31,6 +31,8 @@ export default function VerifyEmailScreen() {
   const [code, setCode] = useState("");
   const [error, setError] = useState("");
 
+  const [loading, setLoading] = useState(true);
+
   useEffect(() => {
     async function loadEmail() {
       const storedEmail = await AsyncStorage.getItem("onboarding_email");
@@ -49,6 +51,8 @@ export default function VerifyEmailScreen() {
     }
 
     try {
+      setLoading(true);
+
       await axios.post(
         "https://api.properform.app/auth/check-verification-code",
         {
@@ -64,6 +68,8 @@ export default function VerifyEmailScreen() {
       setError(
         err.response?.data?.error || "Bitte gib den richtigen Code ein.",
       );
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -126,10 +132,10 @@ export default function VerifyEmailScreen() {
               <TouchableOpacity
                 style={[
                   styles.arrowButton,
-                  code.length !== 6 && { opacity: 0.4 },
+                  (code.length !== 6 || loading) && { opacity: 0.4 },
                 ]}
                 onPress={handleVerify}
-                disabled={code.length !== 6}
+                disabled={code.length !== 6 || loading}
               >
                 <Icon name="arrow-forward" size={24} color={colors.white} />
               </TouchableOpacity>

@@ -19,6 +19,7 @@ interface Props {
 
 export default function ForgotPasswordModal({ visible, onClose }: Props) {
   const [email, setEmail] = React.useState("");
+  const [loading, setLoading] = React.useState(false);
 
   const handleResetPassword = async () => {
     if (!email.trim()) {
@@ -27,6 +28,8 @@ export default function ForgotPasswordModal({ visible, onClose }: Props) {
     }
 
     try {
+      setLoading(true);
+
       await axios.post("https://api.properform.app/auth/reset-password", {
         email: email.trim().toLowerCase(),
       });
@@ -43,6 +46,8 @@ export default function ForgotPasswordModal({ visible, onClose }: Props) {
         err.response?.data?.error ||
         "Etwas ist schiefgelaufen. Bitte später erneut versuchen.";
       Alert.alert("Fehler", message);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -63,7 +68,11 @@ export default function ForgotPasswordModal({ visible, onClose }: Props) {
             onChange={setEmail}
           />
 
-          <TouchableOpacity style={styles.button} onPress={handleResetPassword}>
+          <TouchableOpacity
+            style={[styles.button, loading && { opacity: 0.5 }]}
+            onPress={handleResetPassword}
+            disabled={loading}
+          >
             <Text style={styles.buttonText}>Link senden</Text>
           </TouchableOpacity>
 

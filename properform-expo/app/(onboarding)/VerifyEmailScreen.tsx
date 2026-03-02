@@ -31,7 +31,7 @@ export default function VerifyEmailScreen() {
   const [code, setCode] = useState("");
   const [error, setError] = useState("");
 
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     async function loadEmail() {

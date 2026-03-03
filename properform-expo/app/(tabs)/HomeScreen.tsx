@@ -5,7 +5,6 @@ import { typography } from "@/src/theme/typography";
 import { spacing } from "@/src/theme/spacing";
 import { colors } from "@/src/theme/colors";
 import SecondaryButton from "@/src/components/secondaryButton";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 import * as SecureStore from "expo-secure-store";
 
@@ -25,6 +24,13 @@ export default function HomeScreen() {
     };
     getUserData();
   }, []);
+
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return "Guten Morgen,";
+    if (hour < 18) return "Guten Tag,";
+    return "Guten Abend,";
+  };
 
   // dummy values for streak
   const streakDays = 4;
@@ -50,8 +56,7 @@ export default function HomeScreen() {
           />
 
           <View style={styles.greetingBlock}>
-            {/* TODO: später eventuell guten morgen, guten abend je nach tageszeit*/}
-            <Text style={styles.goodMorning}>Guten Morgen,</Text>
+            <Text style={styles.goodMorning}>{getGreeting()}</Text>
             <Text style={styles.hello}>{user?.firstname || "..."}</Text>
           </View>
         </View>

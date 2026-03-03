@@ -141,12 +141,12 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: colors.background,
   },
   content: {
     flex: 1,
-    paddingHorizontal: 20,
-    paddingTop: 30,
+    paddingHorizontal: spacing.screenPaddingHorizontal,
+    paddingTop: spacing.screenPaddingTop,
   },
   containerImage: {
     alignItems: "center",

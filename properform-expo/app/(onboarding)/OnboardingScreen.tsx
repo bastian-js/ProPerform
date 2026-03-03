@@ -6,6 +6,7 @@ import SecondaryButton from "@/src/components/secondaryButton";
 import { useRouter } from "expo-router";
 import { typography } from "@/src/theme/typography";
 import { spacing } from "@/src/theme/spacing";
+import { colors } from "@/src/theme/colors";
 
 export default function OnboardingScreen() {
   const router = useRouter();
@@ -46,11 +47,11 @@ export default function OnboardingScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: colors.background,
   },
   content: {
     flex: 1,
-    paddingHorizontal: 20,
-    paddingTop: 30,
+    paddingHorizontal: spacing.screenPaddingHorizontal,
+    paddingTop: spacing.screenPaddingTop,
   },
 });

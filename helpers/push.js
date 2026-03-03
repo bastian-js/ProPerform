@@ -21,7 +21,7 @@ export async function sendPush(tokens, title, body) {
     try {
       await expo.sendPushNotificationsAsync(chunk);
     } catch (err) {
-      console.error("Push error: " + error);
+      console.error("Push error: " + err.message);
     }
   }
 }

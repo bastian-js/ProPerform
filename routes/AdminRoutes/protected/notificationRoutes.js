@@ -72,4 +72,31 @@ router.post(
   },
 );
 
+router.get(
+  "/admin/notifications",
+  requireAuth,
+  requireRole("owner"),
+  async (req, res) => {
+    try {
+      const [rows] = await db.query(`
+      SELECT 
+        nid,
+        title,
+        body,
+        target_type,
+        target_id,
+        created_by,
+        created_at
+      FROM notifications
+      ORDER BY created_at DESC
+    `);
+
+      res.json(rows);
+    } catch (err) {
+      console.error("Admin notifications error:", err);
+      res.status(500).json({ error: "Failed to fetch notifications" });
+    }
+  },
+);
+
 export default router;

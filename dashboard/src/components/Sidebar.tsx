@@ -13,6 +13,7 @@ import {
   Upload,
   CloudUpload,
   Router,
+  ShieldCheck,
 } from "lucide-react";
 
 interface MenuItem {
@@ -122,6 +123,11 @@ export default function Sidebar() {
       ],
     },
     { to: "/stats", icon: <ChartColumn size={20} />, label: "Stats" },
+    {
+      to: "/verify-token",
+      icon: <ShieldCheck size={20} />,
+      label: "Check Token",
+    },
     {
       to: "/system",
       icon: <ChevronsLeftRightEllipsis size={20} />,

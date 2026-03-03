@@ -12,6 +12,7 @@ import AddExercise from "./pages/exercises/AddExercise";
 import ExerciseList from "./pages/exercises/List";
 import FileUpload from "./pages/media/Upload";
 import FileList from "./pages/media/List";
+import CheckToken from "./pages/check-token";
 
 export default function AppRoutes() {
   return (
@@ -72,6 +73,8 @@ export default function AppRoutes() {
 
       <Route path="/media/upload" element={<FileUpload />} />
       <Route path="/media/list" element={<FileList />} />
+
+      <Route path="/verify-token" element={<CheckToken />} />
 
       <Route path="*" element={<NotFound />} />
     </Routes>

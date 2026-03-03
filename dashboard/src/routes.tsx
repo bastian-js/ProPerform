@@ -15,6 +15,9 @@ import FileList from "./pages/media/List";
 import CheckToken from "./pages/CheckToken";
 import UsersMe from "./pages/UsersMe";
 
+import NotificationsList from "./pages/notifications/List";
+import NotificationsDashboard from "./pages/notifications/SendNotification";
+
 export default function AppRoutes() {
   return (
     <Routes>
@@ -77,6 +80,9 @@ export default function AppRoutes() {
 
       <Route path="/verify-token" element={<CheckToken />} />
       <Route path="/users/me" element={<UsersMe />} />
+
+      <Route path="/notifications" element={<NotificationsDashboard />} />
+      <Route path="/notifications/list" element={<NotificationsList />} />
 
       <Route path="*" element={<NotFound />} />
     </Routes>

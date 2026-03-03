@@ -19,9 +19,12 @@ export default function App() {
       }
 
       try {
-        const res = await fetch("https://api.properform.app/auth/verify", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const res = await fetch(
+          "https://api.properform.app/auth/verify-token",
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          },
+        );
 
         if (res.status === 401) {
           localStorage.removeItem("token");

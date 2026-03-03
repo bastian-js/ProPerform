@@ -15,6 +15,9 @@ import {
   Router,
   ShieldCheck,
   CircleUser,
+  BellRing,
+  Send,
+  List,
 } from "lucide-react";
 
 interface MenuItem {
@@ -123,6 +126,22 @@ export default function Sidebar() {
         },
       ],
     },
+    {
+      icon: <BellRing size={20} />,
+      label: "Notifications",
+      children: [
+        {
+          to: "/notifications/list",
+          icon: <List size={20} />,
+          label: "Liste",
+        },
+        {
+          to: "/notifications",
+          icon: <Send size={20} />,
+          label: "Send Notification",
+        },
+      ],
+    },
     { to: "/stats", icon: <ChartColumn size={20} />, label: "Stats" },
     {
       to: "/users/me",
@@ -212,7 +231,7 @@ export default function Sidebar() {
         ProPerform
       </h1>
 
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto no-scrollbar">
         {menuItems.map((item, index) => renderMenuItem(item, index))}
       </div>
 

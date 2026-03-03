@@ -11,7 +11,7 @@ const availableTargetTypes = ["all", "single"];
 router.post(
   "/notifications/send",
   requireAuth,
-  requireRole("admin"),
+  requireRole("owner"),
   async (req, res) => {
     const { title, body, targetType, targetId } = req.body;
 

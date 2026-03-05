@@ -59,6 +59,8 @@ export default function LoginScreen() {
 
       if (stayLoggedIn) await AsyncStorage.setItem("stay_logged_in", "true");
 
+      await AsyncStorage.setItem("onboardingFinished", "true");
+
       router.replace("/(tabs)/HomeScreen");
     } catch (err: any) {
       setError(err.response?.data?.error || "Login fehlgeschlagen.");
@@ -132,7 +134,13 @@ export default function LoginScreen() {
             <View style={styles.navigation}>
               <TouchableOpacity
                 style={styles.arrowButton}
-                onPress={() => router.back()}
+                onPress={() => {
+                  if (router.canGoBack()) {
+                    router.back();
+                  } else {
+                    router.replace("../(onboarding)/OnboardingScreen");
+                  }
+                }}
               >
                 <Icon name="arrow-back" size={24} color={colors.white} />
               </TouchableOpacity>

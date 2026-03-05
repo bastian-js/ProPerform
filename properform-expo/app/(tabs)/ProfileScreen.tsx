@@ -10,7 +10,6 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import SecondaryButton from "@/src/components/secondaryButton";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
 import { spacing } from "@/src/theme/spacing";
 import { colors } from "@/src/theme/colors";
@@ -58,11 +57,9 @@ export default function ProfileScreen() {
       await SecureStore.deleteItemAsync("auth_token");
       await SecureStore.deleteItemAsync("user_id");
 
-      await AsyncStorage.removeItem("onboardingFinished");
-
       console.log("Logout erfolgreich");
 
-      router.replace("../(onboarding)/OnboardingScreen");
+      router.replace("../(auth)/LoginScreen");
     } catch {
       console.log("Fehler Logout", "Logout fehgeschlagen");
     }

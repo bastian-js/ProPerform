@@ -1,12 +1,15 @@
 import { View, Text, StyleSheet, Button, ScrollView } from "react-native";
 import { useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as SecureStorage from "expo-secure-store";
 
 export default function DevMenu() {
   const router = useRouter();
 
-  const resetAsyncStorage = async () => {
+  const resetStorage = async () => {
     await AsyncStorage.clear();
+    await SecureStorage.deleteItemAsync("auth_token");
+    await SecureStorage.deleteItemAsync("user_id");
     alert("Speicher erfolgreich gelöscht!");
   };
 
@@ -78,7 +81,7 @@ export default function DevMenu() {
         <Button
           title="Reset AsyncStorage"
           color="#d9534f"
-          onPress={resetAsyncStorage}
+          onPress={resetStorage}
         />
       </View>
     </ScrollView>

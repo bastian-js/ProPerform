@@ -88,12 +88,22 @@ router.get(
             e.created_at,
             e.updated_at,
             v.url AS video_url,
-            t.url AS thumbnail_url
+            t.url AS thumbnail_url,
+            JSON_ARRAYAGG(
+              JSON_OBJECT(
+                'mgid', mg.mgid,
+                'name', mg.name,
+                'is_primary', emg.is_primary
+              )
+            ) AS muscle_groups
           FROM exercises e
           LEFT JOIN sports s ON e.sid = s.sid
           LEFT JOIN media v ON e.video_mid = v.mid
           LEFT JOIN media t ON e.thumbnail_mid = t.mid
+          LEFT JOIN exercise_muscle_groups emg ON e.eid = emg.eid
+          LEFT JOIN muscle_groups mg ON emg.mgid = mg.mgid
           ${where}
+          GROUP BY e.eid
           ORDER BY e.created_at DESC
           LIMIT ? OFFSET ?
         `;

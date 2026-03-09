@@ -21,21 +21,33 @@ router.get(
       const [rows] = await db.query(
         `
         SELECT
-          eid,
-          name,
-          description,
-          instructions,
-          video_url,
-          thumbnail_url,
-          sid,
-          dlid,
-          duration_minutes,
-          equipment_needed,
-          created_by,
-          created_at,
-          updated_at
-        FROM exercises
-        WHERE eid = ?
+          e.eid,
+          e.name,
+          e.description,
+          e.instructions,
+          v.url AS video_url,
+          t.url AS thumbnail_url,
+          e.sid,
+          e.dlid,
+          e.duration_minutes,
+          e.equipment_needed,
+          e.created_by,
+          e.created_at,
+          e.updated_at,
+          JSON_ARRAYAGG(
+            JSON_OBJECT(
+              'mgid', mg.mgid,
+              'name', mg.name,
+              'is_primary', emg.is_primary
+            )
+          ) AS muscle_groups
+        FROM exercises e
+        LEFT JOIN media v ON e.video_mid = v.mid
+        LEFT JOIN media t ON e.thumbnail_mid = t.mid
+        LEFT JOIN exercise_muscle_groups emg ON e.eid = emg.eid
+        LEFT JOIN muscle_groups mg ON emg.mgid = mg.mgid
+        WHERE e.eid = ?
+        GROUP BY e.eid
         LIMIT 1
         `,
         [eid],

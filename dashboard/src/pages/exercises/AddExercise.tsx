@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   CircleQuestionMark,
   Upload,
@@ -20,8 +20,17 @@ interface FileState {
   showSuccess: boolean;
 }
 
+interface MuscleGroup {
+  mgid: number;
+  is_primary: number;
+}
+
+interface MuscleGroupOption {
+  mgid: number;
+  name: string;
+}
+
 export default function AddExercise() {
-  // Form Fields
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [instructions, setInstructions] = useState("");
@@ -29,16 +38,17 @@ export default function AddExercise() {
   const [diffLevelId, setDiffLevelId] = useState("");
   const [duration, setDuration] = useState("");
   const [equipment, setEquipment] = useState("");
+  const [muscleGroups, setMuscleGroups] = useState<MuscleGroup[]>([]);
+  const [selectedMgid, setSelectedMgid] = useState("");
+  const [isPrimary, setIsPrimary] = useState(false);
+  const [muscleGroupOptions, setMuscleGroupOptions] = useState<
+    MuscleGroupOption[]
+  >([]);
+  const [loadingMg, setLoadingMg] = useState(true);
 
-  // Upload Mode toggles (true = upload, false = id)
   const [videoMode, setVideoMode] = useState(true);
-  const [thumbnailMode, setThumbnailMode] = useState(true);
-
-  // ID inputs
   const [videoId, setVideoId] = useState("");
-  const [thumbnailId, setThumbnailId] = useState("");
 
-  // File States
   const [video, setVideo] = useState<FileState>({
     file: null,
     filename: "",
@@ -49,21 +59,26 @@ export default function AddExercise() {
     showSuccess: false,
   });
 
-  const [thumbnail, setThumbnail] = useState<FileState>({
-    file: null,
-    filename: "",
-    extension: "",
-    mid: null,
-    uploading: false,
-    uploadError: null,
-    showSuccess: false,
-  });
-
-  // Refs
   const videoInputRef = useRef<HTMLInputElement>(null);
-  const thumbnailInputRef = useRef<HTMLInputElement>(null);
 
-  // Extract extension
+  useEffect(() => {
+    const fetchMuscleGroups = async () => {
+      try {
+        const res = await authFetch("https://api.properform.app/muscle-groups");
+        const data = await res.json();
+        if (res.ok && Array.isArray(data)) {
+          setMuscleGroupOptions(data);
+        }
+      } catch (error) {
+        console.error("Failed to load muscle groups:", error);
+      } finally {
+        setLoadingMg(false);
+      }
+    };
+
+    fetchMuscleGroups();
+  }, []);
+
   const getExtension = (filename: string) => {
     const lastDot = filename.lastIndexOf(".");
     return lastDot === -1 ? "" : filename.slice(lastDot + 1);
@@ -74,19 +89,14 @@ export default function AddExercise() {
     return lastDot === -1 ? filename : filename.slice(0, lastDot);
   };
 
-  // Handle File Select
-  const handleFileSelect = (
-    e: React.ChangeEvent<HTMLInputElement>,
-    type: "video" | "thumbnail",
-  ) => {
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const setState = type === "video" ? setVideo : setThumbnail;
     const nameWithoutExt = getNameWithoutExtension(file.name);
     const ext = getExtension(file.name);
 
-    setState((prev) => ({
+    setVideo((prev) => ({
       ...prev,
       file,
       filename: nameWithoutExt,
@@ -95,12 +105,8 @@ export default function AddExercise() {
     }));
   };
 
-  // Handle Clear File
-  const handleClearFile = (type: "video" | "thumbnail") => {
-    const setState = type === "video" ? setVideo : setThumbnail;
-    const inputRef = type === "video" ? videoInputRef : thumbnailInputRef;
-
-    setState((prev) => ({
+  const handleClearFile = () => {
+    setVideo((prev) => ({
       ...prev,
       file: null,
       filename: "",
@@ -108,28 +114,23 @@ export default function AddExercise() {
       uploadError: null,
     }));
 
-    if (inputRef.current) inputRef.current.value = "";
+    if (videoInputRef.current) videoInputRef.current.value = "";
   };
 
-  // Upload Handler
-  async function handleUpload(type: "video" | "thumbnail") {
-    const setState = type === "video" ? setVideo : setThumbnail;
-    const getState = type === "video" ? () => video : () => thumbnail;
-    const state = getState();
-
-    if (!state.file) {
-      setState((prev) => ({
+  async function handleUpload() {
+    if (!video.file) {
+      setVideo((prev) => ({
         ...prev,
         uploadError: "Bitte wähle eine Datei aus",
       }));
       return;
     }
 
-    setState((prev) => ({ ...prev, uploading: true, uploadError: null }));
+    setVideo((prev) => ({ ...prev, uploading: true, uploadError: null }));
 
     const token = localStorage.getItem("token");
     if (!token) {
-      setState((prev) => ({
+      setVideo((prev) => ({
         ...prev,
         uploading: false,
         uploadError: "Kein Token vorhanden",
@@ -138,10 +139,10 @@ export default function AddExercise() {
     }
 
     const formData = new FormData();
-    const newFileName = `${state.filename}.${state.extension}`;
+    const newFileName = `${video.filename}.${video.extension}`;
 
-    const renamedFile = new File([state.file], newFileName, {
-      type: state.file.type,
+    const renamedFile = new File([video.file], newFileName, {
+      type: video.file.type,
     });
 
     formData.append("file", renamedFile);
@@ -155,7 +156,7 @@ export default function AddExercise() {
       const data = await res.json();
 
       if (res.ok && data?.mid) {
-        setState((prev) => ({
+        setVideo((prev) => ({
           ...prev,
           mid: data.mid,
           uploading: false,
@@ -163,17 +164,17 @@ export default function AddExercise() {
         }));
 
         setTimeout(() => {
-          setState((prev) => ({ ...prev, showSuccess: false }));
+          setVideo((prev) => ({ ...prev, showSuccess: false }));
         }, 4000);
       } else {
-        setState((prev) => ({
+        setVideo((prev) => ({
           ...prev,
           uploading: false,
           uploadError: data?.error || "Upload fehlgeschlagen",
         }));
       }
     } catch (error) {
-      setState((prev) => ({
+      setVideo((prev) => ({
         ...prev,
         uploading: false,
         uploadError:
@@ -182,7 +183,40 @@ export default function AddExercise() {
     }
   }
 
-  // Handle Form Submit
+  const handleAddMuscleGroup = () => {
+    if (!selectedMgid) {
+      alert("Bitte wähle eine Muskelgruppe aus");
+      return;
+    }
+
+    const alreadyAdded = muscleGroups.some(
+      (mg) => mg.mgid === Number(selectedMgid),
+    );
+    if (alreadyAdded) {
+      alert("Diese Muskelgruppe wurde bereits hinzugefügt");
+      return;
+    }
+
+    const newMg: MuscleGroup = {
+      mgid: Number(selectedMgid),
+      is_primary: isPrimary ? 1 : 0,
+    };
+
+    setMuscleGroups([...muscleGroups, newMg]);
+    setSelectedMgid("");
+    setIsPrimary(false);
+  };
+
+  const handleRemoveMuscleGroup = (index: number) => {
+    setMuscleGroups(muscleGroups.filter((_, i) => i !== index));
+  };
+
+  const getMuscleGroupName = (mgid: number) => {
+    return (
+      muscleGroupOptions.find((mg) => mg.mgid === mgid)?.name || `ID: ${mgid}`
+    );
+  };
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
 
@@ -192,20 +226,19 @@ export default function AddExercise() {
       return;
     }
 
-    // Get final video MID
     const finalVideoMid = videoMode
       ? video.mid
       : videoId
         ? Number(videoId)
         : null;
-    const finalThumbnailMid = thumbnailMode
-      ? thumbnail.mid
-      : thumbnailId
-        ? Number(thumbnailId)
-        : null;
 
-    if (!finalVideoMid || !finalThumbnailMid) {
-      alert("Bitte lade Video und Thumbnail hoch oder gib ihre IDs ein");
+    if (!finalVideoMid) {
+      alert("Bitte lade Video hoch oder gib seine ID ein");
+      return;
+    }
+
+    if (!sportId || !diffLevelId) {
+      alert("Sport-ID und Difficulty-Level-ID sind erforderlich");
       return;
     }
 
@@ -219,11 +252,11 @@ export default function AddExercise() {
           description,
           instructions,
           video_mid: finalVideoMid,
-          thumbnail_mid: finalThumbnailMid,
           sid: Number(sportId),
           dlid: Number(diffLevelId),
-          duration_minutes: Number(duration),
+          duration_minutes: duration ? Number(duration) : null,
           equipment_needed: equipment,
+          muscle_groups: muscleGroups.length > 0 ? muscleGroups : undefined,
         }),
       },
     );
@@ -243,31 +276,21 @@ export default function AddExercise() {
         uploadError: null,
         showSuccess: false,
       });
-      setThumbnail({
-        file: null,
-        filename: "",
-        extension: "",
-        mid: null,
-        uploading: false,
-        uploadError: null,
-        showSuccess: false,
-      });
       setVideoId("");
-      setThumbnailId("");
       setSportId("");
       setDiffLevelId("");
       setDuration("");
       setEquipment("");
+      setMuscleGroups([]);
+      setSelectedMgid("");
+      setIsPrimary(false);
       if (videoInputRef.current) videoInputRef.current.value = "";
-      if (thumbnailInputRef.current) thumbnailInputRef.current.value = "";
     } else {
       alert(data?.error || "Fehler beim Erstellen");
     }
   }
 
-  const isReady =
-    (videoMode ? video.mid : videoId) &&
-    (thumbnailMode ? thumbnail.mid : thumbnailId);
+  const isReady = videoMode ? video.mid : videoId;
 
   return (
     <div className="flex justify-center w-full mt-5 mb-5">
@@ -278,7 +301,6 @@ export default function AddExercise() {
         <p className="text-center text-gray-400 text-sm mb-8">Nur für Admins</p>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Row 1: Title & Duration */}
           <div className="grid grid-cols-2 gap-6">
             <div className="flex flex-col">
               <label className="text-sm mb-2 text-gray-300 tracking-wide font-semibold">
@@ -301,7 +323,6 @@ export default function AddExercise() {
                 type="number"
                 value={duration}
                 onChange={(e) => setDuration(e.target.value)}
-                required
                 min="1"
                 className="w-full px-5 py-3 rounded-xl bg-gray-700 text-white focus:ring-2 focus:ring-blue-500 outline-none text-lg placeholder-gray-500 transition"
                 placeholder="10"
@@ -309,7 +330,6 @@ export default function AddExercise() {
             </div>
           </div>
 
-          {/* Description */}
           <div className="flex flex-col">
             <label className="text-sm mb-2 text-gray-300 tracking-wide font-semibold">
               Description
@@ -324,7 +344,6 @@ export default function AddExercise() {
             />
           </div>
 
-          {/* Instructions */}
           <div className="flex flex-col">
             <label className="text-sm mb-2 text-gray-300 tracking-wide font-semibold">
               Instructions
@@ -339,7 +358,6 @@ export default function AddExercise() {
             />
           </div>
 
-          {/* VIDEO UPLOAD */}
           <div className="flex flex-col">
             <div className="flex items-center justify-between mb-4">
               <label className="text-sm text-gray-300 tracking-wide font-semibold">
@@ -370,7 +388,6 @@ export default function AddExercise() {
 
             {videoMode ? (
               <>
-                {/* Drop Zone */}
                 <div
                   onClick={() => videoInputRef.current?.click()}
                   className="border-2 border-dashed rounded-xl p-10 transition-all duration-300 cursor-pointer border-gray-600 hover:border-blue-400 relative bg-gray-700/30 group mb-3"
@@ -380,7 +397,7 @@ export default function AddExercise() {
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleClearFile("video");
+                        handleClearFile();
                       }}
                       className="absolute top-3 right-3 bg-red-600 hover:bg-red-700 text-white p-1.5 rounded-full transition-all cursor-pointer hover:scale-110"
                     >
@@ -419,12 +436,11 @@ export default function AddExercise() {
                     ref={videoInputRef}
                     type="file"
                     accept="video/*"
-                    onChange={(e) => handleFileSelect(e, "video")}
+                    onChange={handleFileSelect}
                     className="hidden"
                   />
                 </div>
 
-                {/* Video Filename Input */}
                 {video.file && (
                   <div className="flex flex-col mb-3">
                     <label className="text-xs mb-2 text-gray-400">
@@ -452,11 +468,10 @@ export default function AddExercise() {
                   </div>
                 )}
 
-                {/* Video Upload Button */}
                 {video.file && !video.mid && (
                   <button
                     type="button"
-                    onClick={() => handleUpload("video")}
+                    onClick={handleUpload}
                     disabled={video.uploading}
                     className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-700 disabled:cursor-not-allowed text-white py-3 px-6 rounded-xl font-semibold transition-all duration-300 flex items-center justify-center gap-2 cursor-pointer mb-3"
                   >
@@ -474,7 +489,6 @@ export default function AddExercise() {
                   </button>
                 )}
 
-                {/* Video Messages */}
                 {video.uploadError && (
                   <div className="mb-3 bg-red-500/20 border border-red-500 text-red-200 p-4 rounded-xl flex items-center justify-between">
                     <div className="flex items-center gap-3">
@@ -521,194 +535,6 @@ export default function AddExercise() {
             )}
           </div>
 
-          {/* THUMBNAIL UPLOAD */}
-          <div className="flex flex-col">
-            <div className="flex items-center justify-between mb-4">
-              <label className="text-sm text-gray-300 tracking-wide font-semibold">
-                Thumbnail
-              </label>
-              <ToggleSwitch
-                checked={thumbnailMode}
-                onChange={(checked) => {
-                  setThumbnailMode(checked);
-                  if (checked) {
-                    setThumbnailId("");
-                  } else {
-                    setThumbnail({
-                      file: null,
-                      filename: "",
-                      extension: "",
-                      mid: null,
-                      uploading: false,
-                      uploadError: null,
-                      showSuccess: false,
-                    });
-                  }
-                }}
-                leftLabel="ID"
-                rightLabel="Hochladen"
-              />
-            </div>
-
-            {thumbnailMode ? (
-              <>
-                {/* Drop Zone */}
-                <div
-                  onClick={() => thumbnailInputRef.current?.click()}
-                  className="border-2 border-dashed rounded-xl p-10 transition-all duration-300 cursor-pointer border-gray-600 hover:border-blue-400 relative bg-gray-700/30 group mb-3"
-                >
-                  {thumbnail.file && (
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleClearFile("thumbnail");
-                      }}
-                      className="absolute top-3 right-3 bg-red-600 hover:bg-red-700 text-white p-1.5 rounded-full transition-all cursor-pointer hover:scale-110"
-                    >
-                      <X className="w-5 h-5" />
-                    </button>
-                  )}
-                  <div className="flex flex-col items-center justify-center space-y-4">
-                    <div className="p-4 rounded-lg bg-gray-700">
-                      <Upload className="w-8 h-8 text-gray-400 group-hover:text-blue-400 transition-colors" />
-                    </div>
-
-                    {thumbnail.file ? (
-                      <div className="text-center">
-                        <div className="flex items-center justify-center gap-2 mb-1">
-                          <FileIcon className="w-4 h-4 text-blue-400" />
-                          <p className="font-semibold text-gray-100">
-                            {thumbnail.file.name}
-                          </p>
-                        </div>
-                        <p className="text-sm text-gray-400">
-                          {(thumbnail.file.size / 1024 / 1024).toFixed(2)} MB
-                        </p>
-                      </div>
-                    ) : (
-                      <div className="text-center">
-                        <p className="text-gray-200 font-semibold mb-1">
-                          Datei auswählen oder ablegen
-                        </p>
-                        <p className="text-sm text-gray-400">
-                          Klick oder Drag & Drop
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                  <input
-                    ref={thumbnailInputRef}
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => handleFileSelect(e, "thumbnail")}
-                    className="hidden"
-                  />
-                </div>
-
-                {/* Thumbnail Filename Input */}
-                {thumbnail.file && (
-                  <div className="flex flex-col mb-3">
-                    <label className="text-xs mb-2 text-gray-400">
-                      Dateiname (Extension wird automatisch hinzugefügt)
-                    </label>
-                    <div className="flex gap-2 items-end">
-                      <div className="flex-1">
-                        <input
-                          type="text"
-                          value={thumbnail.filename}
-                          onChange={(e) =>
-                            setThumbnail((prev) => ({
-                              ...prev,
-                              filename: e.target.value,
-                            }))
-                          }
-                          className="w-full px-5 py-3 rounded-xl bg-gray-700 text-white focus:ring-2 focus:ring-blue-500 outline-none text-lg placeholder-gray-500 transition"
-                          placeholder="thumbnail-name"
-                        />
-                      </div>
-                      <span className="text-gray-400 text-sm px-3 py-3 bg-gray-700 rounded-lg">
-                        .{thumbnail.extension}
-                      </span>
-                    </div>
-                  </div>
-                )}
-
-                {/* Thumbnail Upload Button */}
-                {thumbnail.file && !thumbnail.mid && (
-                  <button
-                    type="button"
-                    onClick={() => handleUpload("thumbnail")}
-                    disabled={thumbnail.uploading}
-                    className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-700 disabled:cursor-not-allowed text-white py-3 px-6 rounded-xl font-semibold transition-all duration-300 flex items-center justify-center gap-2 cursor-pointer mb-3"
-                  >
-                    {thumbnail.uploading ? (
-                      <>
-                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                        <span>Wird hochgeladen...</span>
-                      </>
-                    ) : (
-                      <>
-                        <Upload className="w-4 h-4" />
-                        <span>Thumbnail hochladen</span>
-                      </>
-                    )}
-                  </button>
-                )}
-
-                {/* Thumbnail Messages */}
-                {thumbnail.uploadError && (
-                  <div className="mb-3 bg-red-500/20 border border-red-500 text-red-200 p-4 rounded-xl flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <AlertCircle className="w-5 h-5 flex-shrink-0" />
-                      <p>{thumbnail.uploadError}</p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setThumbnail((prev) => ({
-                          ...prev,
-                          uploadError: null,
-                        }))
-                      }
-                      className="text-red-300 hover:text-red-100 transition-colors cursor-pointer"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  </div>
-                )}
-
-                {thumbnail.mid && (
-                  <div className="bg-green-500/20 border border-green-500 text-green-200 p-4 rounded-xl flex items-center gap-3">
-                    <CheckCircle className="w-5 h-5 flex-shrink-0 text-green-400" />
-                    <p className="font-semibold">
-                      ✓ Thumbnail hochgeladen (ID: {thumbnail.mid})
-                    </p>
-                  </div>
-                )}
-              </>
-            ) : (
-              <div className="flex flex-col">
-                <input
-                  type="number"
-                  value={thumbnailId}
-                  onChange={(e) => setThumbnailId(e.target.value)}
-                  placeholder="Thumbnail ID eingeben..."
-                  className="w-full px-5 py-3 rounded-xl bg-gray-700 text-white focus:ring-2 focus:ring-blue-500 outline-none text-lg placeholder-gray-500 transition"
-                />
-                {thumbnailId && (
-                  <div className="mt-3 bg-green-500/20 border border-green-500 text-green-200 p-4 rounded-xl flex items-center gap-3">
-                    <CheckCircle className="w-5 h-5 flex-shrink-0 text-green-400" />
-                    <p className="font-semibold">
-                      ✓ Thumbnail ID: {thumbnailId}
-                    </p>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* Row 2: IDs */}
           <div className="grid grid-cols-2 gap-6">
             <div className="flex flex-col">
               <label className="mb-2 text-sm text-gray-400 tracking-wide flex items-center gap-2">
@@ -766,7 +592,6 @@ export default function AddExercise() {
             </div>
           </div>
 
-          {/* Equipment */}
           <div className="flex flex-col">
             <label className="text-sm mb-2 text-gray-300 tracking-wide font-semibold">
               Equipment
@@ -775,13 +600,98 @@ export default function AddExercise() {
               type="text"
               value={equipment}
               onChange={(e) => setEquipment(e.target.value)}
-              required
               className="w-full px-5 py-3 rounded-xl bg-gray-700 text-white focus:ring-2 focus:ring-blue-500 outline-none text-lg placeholder-gray-500 transition"
               placeholder="Chest Machine"
             />
           </div>
 
-          {/* Submit Button */}
+          <div className="flex flex-col">
+            <label className="text-sm mb-2 text-gray-300 tracking-wide font-semibold">
+              Muscle Groups (optional)
+            </label>
+            <div className="space-y-3">
+              <div className="flex gap-2">
+                <select
+                  value={selectedMgid}
+                  onChange={(e) => setSelectedMgid(e.target.value)}
+                  disabled={loadingMg}
+                  className="flex-1 px-5 py-3 rounded-xl bg-gray-700 text-white focus:ring-2 focus:ring-blue-500 outline-none placeholder-gray-500 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <option value="">
+                    {loadingMg ? "Laden..." : "Muskelgruppe wählen"}
+                  </option>
+                  {muscleGroupOptions.map((mg) => (
+                    <option key={mg.mgid} value={mg.mgid}>
+                      {mg.name}
+                    </option>
+                  ))}
+                </select>
+
+                <button
+                  type="button"
+                  onClick={() => setIsPrimary(!isPrimary)}
+                  className={`px-5 py-3 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                    isPrimary
+                      ? "bg-blue-600 hover:bg-blue-700 text-white"
+                      : "bg-gray-700 hover:bg-gray-600 text-gray-300"
+                  }`}
+                >
+                  <svg
+                    className={`w-5 h-5 transition-all ${
+                      isPrimary ? "scale-100" : "scale-75"
+                    }`}
+                    fill={isPrimary ? "currentColor" : "none"}
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M5 13l4 4L19 7"
+                    />
+                  </svg>
+                  <span>Primary</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleAddMuscleGroup}
+                  className="px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-xl font-semibold transition cursor-pointer"
+                >
+                  Add
+                </button>
+              </div>
+
+              {muscleGroups.length > 0 && (
+                <div className="bg-gray-700/50 rounded-xl p-4 space-y-2">
+                  {muscleGroups.map((mg, idx) => (
+                    <div
+                      key={idx}
+                      className="flex items-center justify-between bg-gray-700 p-3 rounded-lg"
+                    >
+                      <span className="text-gray-200 flex items-center gap-2">
+                        {getMuscleGroupName(mg.mgid)}
+                        {mg.is_primary === 1 && (
+                          <span className="bg-blue-600 text-white text-xs px-2 py-1 rounded-full font-semibold">
+                            Primary
+                          </span>
+                        )}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveMuscleGroup(idx)}
+                        className="text-red-400 hover:text-red-300 transition cursor-pointer"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
           <button
             type="submit"
             disabled={!isReady}
@@ -793,7 +703,7 @@ export default function AddExercise() {
                 <span>Übung erstellen</span>
               </>
             ) : (
-              <span>Video & Thumbnail erforderlich</span>
+              <span>Video erforderlich</span>
             )}
           </button>
         </form>

@@ -12,6 +12,7 @@ import { MaterialIcons as Icon } from "@expo/vector-icons";
 import { colors } from "@/src/theme/colors";
 import { typography } from "@/src/theme/typography";
 import { spacing } from "@/src/theme/spacing";
+import { useVideoPlayer, VideoView } from "expo-video";
 
 type MuscleGroup = {
   mgid: number;
@@ -58,6 +59,20 @@ export default function ExerciseDetailModal({
   onClose,
 }: Props) {
   if (!exercise) return null;
+
+  const player = useVideoPlayer(exercise.video_url ?? "", (p) => {
+    p.loop = true;
+    p.muted = true;
+    p.play();
+  });
+
+  React.useEffect(() => {
+    if (visible && player) {
+      player.play();
+    } else {
+      player?.pause();
+    }
+  }, [visible, player, exercise]);
 
   return (
     <Modal
@@ -151,6 +166,19 @@ export default function ExerciseDetailModal({
               </View>
             </View>
           </ScrollView>
+          {/* Videoanleitung */}
+          {exercise.video_url && (
+            <View style={styles.card}>
+              <Text style={styles.cardTitle}>Videoanleitung</Text>
+              <VideoView
+                player={player}
+                style={styles.video}
+                allowsFullscreen
+                allowsPictureInPicture
+                startsPictureInPictureAutomatically
+              />
+            </View>
+          )}
         </View>
       </View>
     </Modal>
@@ -263,5 +291,10 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.xs,
+  },
+  video: {
+    width: "100%",
+    height: 200,
+    borderRadius: 12,
   },
 });

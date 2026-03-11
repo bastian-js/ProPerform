@@ -9,6 +9,10 @@ import { buildVerificationEmail } from "../../../helpers/buildMails.js";
 
 import { createRateLimiter } from "../../../middleware/rate.js";
 
+import dotenv from "dotenv";
+
+dotenv.config();
+
 const router = express.Router();
 
 const saltRounds = Number(process.env.SALT_ROUNDS) || 10;

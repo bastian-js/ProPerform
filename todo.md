@@ -3,3 +3,5 @@
 - alle übungen das man die filtern kann (gym = pro muskelgruppe, basketball = sprungkraft, etc.)
 
 - refresh tokens
+
+test

@@ -54,7 +54,7 @@ export default function TabLayout() {
 
         console.log("🎟 Expo push token:", token);
 
-        const jwt = await SecureStore.getItemAsync("auth_token");
+        const jwt = await SecureStore.getItemAsync("access_token");
         console.log("🔐 JWT found:", !!jwt);
 
         if (!jwt) {

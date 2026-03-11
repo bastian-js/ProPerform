@@ -48,13 +48,14 @@ export default function LoginScreen() {
         },
       );
 
-      const { token, uid } = response.data;
-      console.log("Login success");
+      const { access_token, refresh_token, uid } = response.data;
+      console.log("Login success for UID:", uid);
 
       // await AsyncStorage.setItem("auth_token", token);
       // await AsyncStorage.setItem("user_id", String(uid));
       // ^ switch to secure store for sensitive data
-      await SecureStore.setItemAsync("auth_token", token);
+      await SecureStore.setItemAsync("access_token", String(access_token));
+      await SecureStore.setItemAsync("refresh_token", String(refresh_token));
       await SecureStore.setItemAsync("user_id", String(uid));
 
       if (stayLoggedIn) await AsyncStorage.setItem("stay_logged_in", "true");

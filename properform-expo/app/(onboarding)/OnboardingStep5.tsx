@@ -120,11 +120,12 @@ export default function OnboardingStep5() {
         requestBody,
       );
 
-      const { token, uid } = response.data;
+      const { access_token, refresh_token, uid } = response.data;
 
       // await AsyncStorage.setItem("auth_token", token);
       // await AsyncStorage.setItem("user_id", String(uid));
-      await SecureStore.setItemAsync("auth_token", token);
+      await SecureStore.setItemAsync("access_token", String(access_token));
+      await SecureStore.setItemAsync("refresh_token", String(refresh_token));
       await SecureStore.setItemAsync("user_id", String(uid));
       await AsyncStorage.removeItem("onboarding_password");
 

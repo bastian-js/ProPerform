@@ -16,7 +16,7 @@ export default function HomeScreen() {
 
   useEffect(() => {
     const getUserData = async () => {
-      const token = await SecureStore.getItemAsync("auth_token");
+      const token = await SecureStore.getItemAsync("access_token");
       const response = await axios.get("https://api.properform.app/users/me", {
         headers: { Authorization: `Bearer ${token}` },
       });

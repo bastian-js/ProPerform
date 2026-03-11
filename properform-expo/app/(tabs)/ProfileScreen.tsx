@@ -28,7 +28,7 @@ export default function ProfileScreen() {
 
   useEffect(() => {
     const getUser = async () => {
-      const token = await SecureStore.getItemAsync("auth_token");
+      const token = await SecureStore.getItemAsync("access_token");
       const response = await axios.get("https://api.properform.app/users/me", {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -54,7 +54,8 @@ export default function ProfileScreen() {
 
   const handleLogout = async () => {
     try {
-      await SecureStore.deleteItemAsync("auth_token");
+      await SecureStore.deleteItemAsync("access_token");
+      await SecureStore.deleteItemAsync("refresh_token");
       await SecureStore.deleteItemAsync("user_id");
 
       console.log("Logout erfolgreich");

@@ -8,7 +8,8 @@ export default function DevMenu() {
 
   const resetStorage = async () => {
     await AsyncStorage.clear();
-    await SecureStorage.deleteItemAsync("auth_token");
+    await SecureStorage.deleteItemAsync("access_token");
+    await SecureStorage.deleteItemAsync("refresh_token");
     await SecureStorage.deleteItemAsync("user_id");
     alert("Speicher erfolgreich gelöscht!");
   };

@@ -86,7 +86,7 @@ export default function ExerciseScreen() {
       try {
         setLoading(true);
         setError(null);
-        const token = await SecureStore.getItemAsync("auth_token");
+        const token = await SecureStore.getItemAsync("access_token");
 
         const response = await axios.get(
           "https://api.properform.app/exercises",
@@ -241,11 +241,13 @@ export default function ExerciseScreen() {
 
                 <View style={styles.exerciseInfo}>
                   <Text style={styles.exerciseName}>{exercise.name}</Text>
+                  {/* muscle group api not working
                   <Text style={styles.exerciseMuscle}>
                     {(exercise.muscle_groups ?? []).find(
                       (mg) => mg.is_primary === 1,
                     )?.name ?? ""}
                   </Text>
+                  */}
                 </View>
 
                 <Icon

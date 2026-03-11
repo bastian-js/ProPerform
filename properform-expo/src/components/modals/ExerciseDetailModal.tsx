@@ -101,6 +101,7 @@ export default function ExerciseDetailModal({
             <View style={styles.infoSection}>
               <Text style={styles.category}>{getSportName(exercise.sid)}</Text>
               <Text style={styles.name}>{exercise.name}</Text>
+              {/* muscle group api not working
               <View style={styles.badge}>
                 <Icon
                   name="sports-gymnastics"
@@ -114,6 +115,7 @@ export default function ExerciseDetailModal({
                   )?.name ?? ""}
                 </Text>
               </View>
+              */}
 
               {/* difficulty */}
               <View style={styles.badge}>

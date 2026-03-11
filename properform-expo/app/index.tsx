@@ -17,7 +17,7 @@ export default function Index() {
         return;
       }
 
-      const token = await SecureStore.getItemAsync("auth_token");
+      const token = await SecureStore.getItemAsync("access_token");
       if (token) {
         setStatus("home");
         return;

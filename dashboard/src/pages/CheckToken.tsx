@@ -5,15 +5,11 @@ import { useEffect, useRef, useState } from "react";
 import { CheckCircle, XCircle, Loader } from "lucide-react";
 
 interface TokenResponse {
-  valid: boolean;
   uid: number;
-  user: {
-    uid: number;
-    firstname: string;
-    email: string;
-    created_at: string;
-    last_login: string | null;
-  };
+  firstname: string;
+  email: string;
+  created_at: string;
+  last_login: string | null;
 }
 
 export default function CheckToken() {
@@ -195,14 +191,14 @@ export default function CheckToken() {
               <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
                 <p className="text-sm text-gray-400 font-medium mb-1">Name</p>
                 <p className="text-lg font-semibold text-gray-100">
-                  {tokenData.user.firstname}
+                  {tokenData.firstname}
                 </p>
               </div>
 
               <div className="bg-gray-800 rounded-lg p-4 border border-gray-700 md:col-span-2">
                 <p className="text-sm text-gray-400 font-medium mb-1">Email</p>
                 <p className="text-lg font-semibold text-gray-100">
-                  {tokenData.user.email}
+                  {tokenData.email}
                 </p>
               </div>
 
@@ -211,9 +207,7 @@ export default function CheckToken() {
                   Created
                 </p>
                 <p className="text-sm text-gray-300">
-                  {new Date(tokenData.user.created_at).toLocaleDateString(
-                    "en-US",
-                  )}
+                  {new Date(tokenData.created_at).toLocaleDateString("en-US")}
                 </p>
               </div>
 
@@ -222,10 +216,8 @@ export default function CheckToken() {
                   Last Login
                 </p>
                 <p className="text-sm text-gray-300">
-                  {tokenData.user.last_login
-                    ? new Date(tokenData.user.last_login).toLocaleDateString(
-                        "en-US",
-                      )
+                  {tokenData.last_login
+                    ? new Date(tokenData.last_login).toLocaleDateString("en-US")
                     : "Never"}
                 </p>
               </div>

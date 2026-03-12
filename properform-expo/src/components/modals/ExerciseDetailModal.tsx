@@ -58,9 +58,7 @@ export default function ExerciseDetailModal({
   exercise,
   onClose,
 }: Props) {
-  if (!exercise) return null;
-
-  const player = useVideoPlayer(exercise.video_url ?? "", (p) => {
+  const player = useVideoPlayer(exercise?.video_url ?? null, (p) => {
     p.loop = true;
     p.muted = true;
     p.play();
@@ -73,6 +71,8 @@ export default function ExerciseDetailModal({
       player?.pause();
     }
   }, [visible, player, exercise]);
+
+  if (!exercise) return null;
 
   return (
     <Modal

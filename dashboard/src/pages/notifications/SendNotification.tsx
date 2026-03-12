@@ -3,6 +3,7 @@ import Text from "../../components/Text";
 import Button from "../../components/Button";
 import { useEffect, useRef, useState } from "react";
 import { CheckCircle, XCircle, Loader, Send } from "lucide-react";
+import { apiFetch } from "../../helpers/apiFetch";
 
 export default function NotificationsDashboard() {
   const BASE_URL = "https://api.properform.app";
@@ -92,21 +93,6 @@ export default function NotificationsDashboard() {
     setRequestState("loading");
 
     try {
-      // Get token from localStorage or wherever it's stored
-      const token = localStorage.getItem("token");
-
-      if (!token) {
-        setErrorMessage("No authentication token found. Please log in.");
-        setRequestState("error");
-        setSuccessMessage("");
-
-        stateTimeoutRef.current = window.setTimeout(() => {
-          setRequestState("idle");
-          stateTimeoutRef.current = null;
-        }, 5000);
-        return;
-      }
-
       const payload = {
         title: title.trim(),
         body: body.trim(),
@@ -114,11 +100,10 @@ export default function NotificationsDashboard() {
         targetId: targetType === "single" ? parseInt(targetId) : null,
       };
 
-      const result = await fetch(`${BASE_URL}/admin/notifications/send`, {
+      const result = await apiFetch(`${BASE_URL}/admin/notifications/send`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(payload),
       });

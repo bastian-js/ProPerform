@@ -3,6 +3,7 @@ import Text from "../components/Text";
 import Button from "../components/Button";
 import { useEffect, useRef, useState } from "react";
 import { CheckCircle, XCircle, Loader } from "lucide-react";
+import { apiFetch } from "../helpers/apiFetch";
 
 interface TokenResponse {
   valid: boolean;
@@ -61,12 +62,8 @@ export default function CheckToken() {
     setRequestState("loading");
 
     try {
-      const result = await fetch(`${BASE_URL}/auth/verify-token`, {
+      const result = await apiFetch(`${BASE_URL}/auth/verify-token`, {
         method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${trimmedToken}`,
-        },
       });
 
       if (result.ok) {

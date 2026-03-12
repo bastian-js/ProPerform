@@ -1,26 +1,19 @@
 import { useEffect, useState } from "react";
 import { Trash, ChevronLeft, ChevronRight } from "lucide-react";
-
-import authFetch from "../functions/authFetch";
+import { apiFetch } from "../helpers/apiFetch";
 
 export default function Users() {
   const [users, setUsers] = useState<any[]>([]);
   const [trainers, setTrainers] = useState<any[]>([]);
 
   const deleteUser = async (uid: string) => {
-    const token = localStorage.getItem("token");
-    if (!token) {
-      alert("Kein Token vorhanden – bitte zuerst anmelden.");
-      return;
-    }
-
     const response = confirm(
       `Möchten Sie den Benutzer mit UID ${uid} wirklich löschen?`,
     );
     if (!response) return;
 
     try {
-      const res = await authFetch(`https://api.properform.app/users/${uid}`, {
+      const res = await apiFetch(`https://api.properform.app/users/${uid}`, {
         method: "DELETE",
       });
 
@@ -39,12 +32,6 @@ export default function Users() {
   };
 
   const deleteTrainer = async (tid: string) => {
-    const token = localStorage.getItem("token");
-    if (!token) {
-      alert("Kein Token vorhanden – bitte zuerst anmelden.");
-      return;
-    }
-
     const response = confirm(
       `Möchten Sie den Trainer mit TID ${tid} wirklich löschen?`,
     );
@@ -52,12 +39,9 @@ export default function Users() {
     if (!response) return;
 
     try {
-      const res = await authFetch(
-        `https://api.properform.app/trainers/${tid}`,
-        {
-          method: "DELETE",
-        },
-      );
+      const res = await apiFetch(`https://api.properform.app/trainers/${tid}`, {
+        method: "DELETE",
+      });
 
       if (res.ok) {
         alert(`✅ Trainer mit TID ${tid} erfolgreich gelöscht!`);
@@ -78,10 +62,7 @@ export default function Users() {
   const [totalUsersPages, setTotalUsersPages] = useState(1);
 
   const fetchUsers = async () => {
-    const token = localStorage.getItem("token");
-    if (!token) return;
-
-    const res = await authFetch(
+    const res = await apiFetch(
       `https://api.properform.app/users/users?page=${usersPage}&limit=${limit}`,
     );
 
@@ -96,13 +77,8 @@ export default function Users() {
   const [totalTrainerPages, setTotalTrainerPages] = useState(1);
 
   const fetchTrainers = async () => {
-    const token = localStorage.getItem("token");
-    if (!token) return;
-    const res = await authFetch(
+    const res = await apiFetch(
       `https://api.properform.app/users/trainers?page=${trainersPage}&limit=${limit}`,
-      {
-        headers: { Authorization: `Bearer ${token}` },
-      },
     );
 
     if (!res.ok) return;

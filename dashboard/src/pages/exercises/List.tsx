@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Trash, ChevronLeft, ChevronRight, Pencil, X } from "lucide-react";
-import authFetch from "../../functions/authFetch";
+import { apiFetch } from "../../helpers/apiFetch";
 
 const BASE_URL = "https://api.properform.app";
 //const BASE_URL = "http://localhost:3000";
@@ -62,15 +62,8 @@ export default function ExercisesList() {
 
   const fetchExercises = async (): Promise<void> => {
     setLoading(true);
-    const token = localStorage.getItem("token");
-    if (!token) {
-      setError("Kein Token vorhanden – bitte zuerst anmelden.");
-      setLoading(false);
-      return;
-    }
-
     try {
-      const res = await authFetch(
+      const res = await apiFetch(
         `${BASE_URL}/exercises?page=${page}&limit=${limit}`,
       );
 
@@ -98,14 +91,8 @@ export default function ExercisesList() {
   }, [page]);
 
   const handleOpenUpdate = async (eid: string): Promise<void> => {
-    const token = localStorage.getItem("token");
-    if (!token) {
-      setError("Kein Token vorhanden – bitte zuerst anmelden.");
-      return;
-    }
-
     try {
-      const res = await authFetch(`${BASE_URL}/admin/exercises/${eid}`);
+      const res = await apiFetch(`${BASE_URL}/admin/exercises/${eid}`);
 
       if (!res.ok) throw new Error("Fehler beim Laden der Übung");
 
@@ -134,12 +121,6 @@ export default function ExercisesList() {
   const handleUpdate = async (): Promise<void> => {
     if (!selectedExercise) return;
 
-    const token = localStorage.getItem("token");
-    if (!token) {
-      setError("Kein Token vorhanden – bitte zuerst anmelden.");
-      return;
-    }
-
     try {
       setIsUpdating(true);
 
@@ -155,7 +136,7 @@ export default function ExercisesList() {
         equipment_needed: formData.equipment_needed || null,
       };
 
-      const res = await authFetch(
+      const res = await apiFetch(
         `${BASE_URL}/admin/exercises/${selectedExercise.eid}`,
         {
           method: "PUT",
@@ -186,14 +167,8 @@ export default function ExercisesList() {
   const handleDelete = async (): Promise<void> => {
     if (!deleteTarget) return;
 
-    const token = localStorage.getItem("token");
-    if (!token) {
-      setError("Kein Token vorhanden – bitte zuerst anmelden.");
-      return;
-    }
-
     try {
-      const res = await authFetch(
+      const res = await apiFetch(
         `${BASE_URL}/admin/exercises/${deleteTarget}`,
         { method: "DELETE" },
       );

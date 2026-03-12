@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { apiFetch } from "../helpers/apiFetch";
 
 export default function CreateOwner() {
   const [firstname, setFirstname] = useState("");
@@ -9,20 +10,16 @@ export default function CreateOwner() {
   async function handleCreateOwner(e: React.FormEvent) {
     e.preventDefault();
 
-    const token = localStorage.getItem("token");
-    if (!token) {
-      alert("Kein Token vorhanden – bitte zuerst anmelden.");
-      return;
-    }
-
-    const res = await fetch("https://api.properform.app/auth/admin/register", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
+    const res = await apiFetch(
+      "https://api.properform.app/auth/admin/register",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ firstname, birthdate, email, password_hash }),
       },
-      body: JSON.stringify({ firstname, birthdate, email, password_hash }),
-    });
+    );
 
     const data = await res.json();
 

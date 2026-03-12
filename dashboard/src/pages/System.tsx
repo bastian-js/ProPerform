@@ -3,6 +3,7 @@ import { Check, X, RotateCw } from "lucide-react";
 import Button from "../components/Button";
 import Heading from "../components/Heading";
 import Text from "../components/Text";
+import { apiFetch } from "../helpers/apiFetch";
 
 type Health = {
   status: string;
@@ -44,12 +45,9 @@ export default function SystemStatus() {
     setButtonState("loading");
 
     try {
-      const token = localStorage.getItem("token");
-      if (!token) throw new Error("No token found");
-
-      const res = await fetch("https://api.properform.app/system/healthcheck", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await apiFetch(
+        "https://api.properform.app/system/healthcheck",
+      );
 
       if (!res.ok) {
         const txt = await res.text();

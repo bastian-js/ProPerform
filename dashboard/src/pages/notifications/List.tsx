@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { ChevronLeft, ChevronRight, Eye } from "lucide-react";
-import authFetch from "../../functions/authFetch";
+import { apiFetch } from "../../helpers/apiFetch";
 
 const BASE_URL = "https://api.properform.app";
 
@@ -28,15 +28,8 @@ export default function NotificationsList() {
 
   const fetchNotifications = async (): Promise<void> => {
     setLoading(true);
-    const token = localStorage.getItem("token");
-    if (!token) {
-      setError("Kein Token vorhanden – bitte zuerst anmelden.");
-      setLoading(false);
-      return;
-    }
-
     try {
-      const res = await authFetch(`${BASE_URL}/admin/notifications`);
+      const res = await apiFetch(`${BASE_URL}/admin/notifications`);
 
       if (!res.ok) {
         setError("Fehler beim Abrufen der Benachrichtigungen");

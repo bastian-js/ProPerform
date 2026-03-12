@@ -8,7 +8,7 @@ import {
   FileIcon,
 } from "lucide-react";
 import ToggleSwitch from "../../components/ToggleSwitch";
-import authFetch from "../../functions/authFetch";
+import { apiFetch } from "../../helpers/apiFetch";
 
 interface FileState {
   file: File | null;
@@ -48,6 +48,9 @@ export default function AddExercise() {
 
   const [videoMode, setVideoMode] = useState(true);
   const [videoId, setVideoId] = useState("");
+  const [videoIdError, setVideoIdError] = useState<string | null>(null);
+  const [videoIdValid, setVideoIdValid] = useState(false);
+  const [checkingVideoId, setCheckingVideoId] = useState(false);
 
   const [video, setVideo] = useState<FileState>({
     file: null,
@@ -64,10 +67,16 @@ export default function AddExercise() {
   useEffect(() => {
     const fetchMuscleGroups = async () => {
       try {
-        const res = await authFetch("https://api.properform.app/muscle-groups");
-        const data = await res.json();
-        if (res.ok && Array.isArray(data)) {
-          setMuscleGroupOptions(data);
+        const res = await apiFetch(
+          "https://api.properform.app/admin/exercises/muscle-groups",
+        );
+        const json = await res.json();
+        if (!res.ok) {
+          console.error("Muscle groups fetch failed:", res.status, json);
+        } else if (Array.isArray(json.data)) {
+          setMuscleGroupOptions(json.data);
+        } else {
+          console.error("Unexpected muscle groups response:", json);
         }
       } catch (error) {
         console.error("Failed to load muscle groups:", error);
@@ -128,16 +137,6 @@ export default function AddExercise() {
 
     setVideo((prev) => ({ ...prev, uploading: true, uploadError: null }));
 
-    const token = localStorage.getItem("token");
-    if (!token) {
-      setVideo((prev) => ({
-        ...prev,
-        uploading: false,
-        uploadError: "Kein Token vorhanden",
-      }));
-      return;
-    }
-
     const formData = new FormData();
     const newFileName = `${video.filename}.${video.extension}`;
 
@@ -148,7 +147,7 @@ export default function AddExercise() {
     formData.append("file", renamedFile);
 
     try {
-      const res = await authFetch("https://api.properform.app/media", {
+      const res = await apiFetch("https://api.properform.app/media", {
         method: "POST",
         body: formData,
       });
@@ -212,19 +211,13 @@ export default function AddExercise() {
   };
 
   const getMuscleGroupName = (mgid: number) => {
-    return (
-      muscleGroupOptions.find((mg) => mg.mgid === mgid)?.name || `ID: ${mgid}`
-    );
+    const found = muscleGroupOptions.find((mg) => mg.mgid === mgid);
+    if (!found) return `ID: ${mgid}`;
+    return found.name.charAt(0).toUpperCase() + found.name.slice(1);
   };
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-
-    const token = localStorage.getItem("token");
-    if (!token) {
-      alert("Kein Token vorhanden");
-      return;
-    }
 
     const finalVideoMid = videoMode
       ? video.mid
@@ -242,7 +235,7 @@ export default function AddExercise() {
       return;
     }
 
-    const res = await authFetch(
+    const res = await apiFetch(
       "https://api.properform.app/admin/exercises/create",
       {
         method: "POST",
@@ -277,6 +270,8 @@ export default function AddExercise() {
         showSuccess: false,
       });
       setVideoId("");
+      setVideoIdError(null);
+      setVideoIdValid(false);
       setSportId("");
       setDiffLevelId("");
       setDuration("");
@@ -290,7 +285,31 @@ export default function AddExercise() {
     }
   }
 
-  const isReady = videoMode ? video.mid : videoId;
+  const checkVideoId = async (mid: string) => {
+    if (!mid) return;
+    setCheckingVideoId(true);
+    setVideoIdError(null);
+    setVideoIdValid(false);
+    try {
+      const res = await apiFetch(`https://api.properform.app/media/${mid}`);
+      if (!res.ok) {
+        setVideoIdError("Medium nicht gefunden.");
+        return;
+      }
+      const data = await res.json();
+      if (data.type !== "video") {
+        setVideoIdError(`Dieses Medium ist kein Video (Typ: ${data.type}).`);
+      } else {
+        setVideoIdValid(true);
+      }
+    } catch {
+      setVideoIdError("Fehler beim Überprüfen der ID.");
+    } finally {
+      setCheckingVideoId(false);
+    }
+  };
+
+  const isReady = videoMode ? video.mid : videoIdValid && videoId;
 
   return (
     <div className="flex justify-center w-full mt-5 mb-5">
@@ -369,6 +388,8 @@ export default function AddExercise() {
                   setVideoMode(checked);
                   if (checked) {
                     setVideoId("");
+                    setVideoIdError(null);
+                    setVideoIdValid(false);
                   } else {
                     setVideo({
                       file: null,
@@ -521,14 +542,33 @@ export default function AddExercise() {
                 <input
                   type="number"
                   value={videoId}
-                  onChange={(e) => setVideoId(e.target.value)}
+                  onChange={(e) => {
+                    setVideoId(e.target.value);
+                    setVideoIdError(null);
+                    setVideoIdValid(false);
+                  }}
+                  onBlur={(e) => {
+                    if (e.target.value) checkVideoId(e.target.value);
+                  }}
                   placeholder="Video ID eingeben..."
                   className="w-full px-5 py-3 rounded-xl bg-gray-700 text-white focus:ring-2 focus:ring-blue-500 outline-none text-lg placeholder-gray-500 transition"
                 />
-                {videoId && (
+                {checkingVideoId && (
+                  <div className="mt-3 text-gray-400 text-sm flex items-center gap-2">
+                    <div className="w-4 h-4 border-2 border-gray-400/30 border-t-gray-400 rounded-full animate-spin" />
+                    Wird überprüft...
+                  </div>
+                )}
+                {videoIdValid && !checkingVideoId && (
                   <div className="mt-3 bg-green-500/20 border border-green-500 text-green-200 p-4 rounded-xl flex items-center gap-3">
-                    <CheckCircle className="w-5 h-5 flex-shrink-0 text-green-400" />
+                    <CheckCircle className="w-5 h-5 shrink-0 text-green-400" />
                     <p className="font-semibold">✓ Video ID: {videoId}</p>
+                  </div>
+                )}
+                {videoIdError && !checkingVideoId && (
+                  <div className="mt-3 bg-red-500/20 border border-red-500 text-red-200 p-4 rounded-xl flex items-center gap-3">
+                    <AlertCircle className="w-5 h-5 shrink-0 text-red-400" />
+                    <p className="font-semibold">{videoIdError}</p>
                   </div>
                 )}
               </div>
@@ -622,7 +662,7 @@ export default function AddExercise() {
                   </option>
                   {muscleGroupOptions.map((mg) => (
                     <option key={mg.mgid} value={mg.mgid}>
-                      {mg.name}
+                      {mg.name.charAt(0).toUpperCase() + mg.name.slice(1)}
                     </option>
                   ))}
                 </select>

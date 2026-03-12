@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { apiFetch } from "../helpers/apiFetch";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -13,7 +14,7 @@ export default function Login() {
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
 
-    const res = await fetch("https://api.properform.app/auth/admin/login", {
+    const res = await apiFetch("https://api.properform.app/auth/admin/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, password }),
@@ -21,8 +22,9 @@ export default function Login() {
 
     const data = await res.json();
 
-    if (res.ok && data.token) {
-      localStorage.setItem("token", data.token);
+    if (res.ok && data.access_token) {
+      localStorage.setItem("token", data.access_token);
+      localStorage.setItem("refresh_token", data.refresh_token);
       window.location.href = "/";
     } else {
       alert(data.error || "Login fehlgeschlagen");
@@ -34,7 +36,7 @@ export default function Login() {
     setResetLoading(true);
 
     try {
-      await fetch("https://api.properform.app/auth/reset-password", {
+      await apiFetch("https://api.properform.app/auth/reset-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: resetEmail }),

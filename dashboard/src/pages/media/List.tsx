@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Trash, Pencil, X, Image, Video, ExternalLink } from "lucide-react";
-import authFetch from "../../functions/authFetch";
+import { apiFetch } from "../../helpers/apiFetch";
 
 const BASE_URL = "https://api.properform.app";
 
@@ -39,15 +39,8 @@ export default function MediaList() {
 
   const fetchMedia = async (): Promise<void> => {
     setLoading(true);
-    const token = localStorage.getItem("token");
-    if (!token) {
-      setError("Kein Token vorhanden – bitte zuerst anmelden.");
-      setLoading(false);
-      return;
-    }
-
     try {
-      const res = await authFetch(`${BASE_URL}/media`);
+      const res = await apiFetch(`${BASE_URL}/media`);
 
       if (!res.ok) {
         setError("Fehler beim Abrufen der Medien");
@@ -84,12 +77,6 @@ export default function MediaList() {
   const handleUpdate = async (): Promise<void> => {
     if (!selectedMedia) return;
 
-    const token = localStorage.getItem("token");
-    if (!token) {
-      setError("Kein Token vorhanden – bitte zuerst anmelden.");
-      return;
-    }
-
     try {
       setIsUpdating(true);
 
@@ -100,7 +87,7 @@ export default function MediaList() {
         filename: filenameWithExt,
       };
 
-      const res = await authFetch(`${BASE_URL}/media/${selectedMedia.mid}`, {
+      const res = await apiFetch(`${BASE_URL}/media/${selectedMedia.mid}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -128,14 +115,8 @@ export default function MediaList() {
   const handleDelete = async (): Promise<void> => {
     if (!deleteTarget) return;
 
-    const token = localStorage.getItem("token");
-    if (!token) {
-      setError("Kein Token vorhanden – bitte zuerst anmelden.");
-      return;
-    }
-
     try {
-      const res = await authFetch(`${BASE_URL}/media/${deleteTarget}`, {
+      const res = await apiFetch(`${BASE_URL}/media/${deleteTarget}`, {
         method: "DELETE",
       });
 

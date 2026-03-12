@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { apiFetch } from "../helpers/apiFetch";
 
 export default function CreateTrainer() {
   const [firstname, setFirstname] = useState("");
@@ -11,28 +12,24 @@ export default function CreateTrainer() {
   async function handleCreateTrainer(e: React.FormEvent) {
     e.preventDefault();
 
-    const token = localStorage.getItem("token");
-    if (!token) {
-      alert("Kein Token vorhanden – bitte zuerst anmelden.");
-      return;
-    }
-
-    const res = await fetch("https://api.properform.app/trainers", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
+    const res = await apiFetch(
+      "https://api.properform.app/auth/trainers/register",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          //   const { firstname, lastname, password, birthdate, email, phone_number }
+          firstname,
+          lastname,
+          password,
+          birthdate,
+          email,
+          phone_number,
+        }),
       },
-      body: JSON.stringify({
-        //   const { firstname, lastname, password, birthdate, email, phone_number }
-        firstname,
-        lastname,
-        password,
-        birthdate,
-        email,
-        phone_number,
-      }),
-    });
+    );
 
     const data = await res.json();
 

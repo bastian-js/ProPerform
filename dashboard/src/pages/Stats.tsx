@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import authFetch from "../functions/authFetch";
+import { apiFetch } from "../helpers/apiFetch";
 
 export default function Stats() {
   const [numberAll, setNumberAll] = useState(0);
@@ -8,34 +8,16 @@ export default function Stats() {
   const [numberOfOwners, setNumberOfOwners] = useState(0);
 
   const fetchStats = async () => {
-    const token = localStorage.getItem("token");
-    if (!token) return;
-
     try {
-      /*
-      const [usersRes, trainersRes] = await Promise.all([
-        fetch("https://api.properform.app/users/getNumberOfUsers", {
-          method: "GET",
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-        fetch("https://api.properform.app/users/getNumberOfTrainers", {
-          method: "GET",
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-      ]);
-      */
+      const allRes = await apiFetch("https://api.properform.app/users");
 
-      const allRes = await authFetch("https://api.properform.app/users");
-
-      const trainersRes = await authFetch(
+      const trainersRes = await apiFetch(
         "https://api.properform.app/users/trainers",
       );
 
-      const usersRes = await authFetch(
-        "https://api.properform.app/users/users",
-      );
+      const usersRes = await apiFetch("https://api.properform.app/users/users");
 
-      const ownersRes = await authFetch(
+      const ownersRes = await apiFetch(
         "https://api.properform.app/users/owners",
       );
 

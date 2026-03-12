@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
 import { Upload, CheckCircle, AlertCircle, X, FileIcon } from "lucide-react";
-import authFetch from "../../functions/authFetch";
+import { apiFetch } from "../../helpers/apiFetch";
 
 const BASE_URL = "https://api.properform.app";
 
@@ -81,7 +81,7 @@ export default function FileUpload() {
         uploadUrl += `?filename=${encodeURIComponent(filename.trim())}`;
       }
 
-      const response = await authFetch(uploadUrl, {
+      const response = await apiFetch(uploadUrl, {
         method: "POST",
         body: formData,
       });

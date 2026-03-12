@@ -3,6 +3,7 @@ import Text from "../components/Text";
 import Button from "../components/Button";
 import { useEffect, useRef, useState } from "react";
 import { CheckCircle, XCircle, Loader } from "lucide-react";
+import { apiFetch } from "../helpers/apiFetch";
 
 interface UserMeResponse {
   uid: number;
@@ -69,11 +70,10 @@ export default function UsersMe() {
     setRequestState("loading");
 
     try {
-      const result = await fetch(`${BASE_URL}/users/me`, {
+      const result = await apiFetch(`${BASE_URL}/users/me`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${trimmedToken}`,
         },
       });
 

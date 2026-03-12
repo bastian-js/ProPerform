@@ -4,6 +4,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import Sidebar from "./components/Sidebar";
 import Header from "./components/Header";
 import AppRoutes from "./routes";
+import { apiFetch } from "./helpers/apiFetch";
 
 export default function App() {
   const navigate = useNavigate();
@@ -11,24 +12,40 @@ export default function App() {
 
   useEffect(() => {
     const verifyToken = async () => {
-      const token = localStorage.getItem("token");
+      const accessToken = localStorage.getItem("token");
+      const refreshToken = localStorage.getItem("refresh_token");
 
-      if (!token) {
+      if (!accessToken && !refreshToken) {
         if (pathname !== "/login") navigate("/login", { replace: true });
         return;
       }
 
       try {
-        const res = await fetch(
+        const res = await apiFetch(
           "https://api.properform.app/auth/verify-token",
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          },
         );
 
         if (res.status === 401) {
-          localStorage.removeItem("token");
-          if (pathname !== "/login") navigate("/login", { replace: true });
+          const refreshRes = await apiFetch(
+            "https://api.properform.app/auth/refresh",
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({ refresh_token: refreshToken }),
+            },
+          );
+
+          if (refreshRes.ok) {
+            const data = await refreshRes.json();
+
+            localStorage.setItem("token", data.access_token);
+          } else {
+            localStorage.removeItem("token");
+            localStorage.removeItem("refresh_token");
+            if (pathname !== "/login") navigate("/login", { replace: true });
+          }
         }
       } catch (err) {
         console.error("Error verifying token:", err);

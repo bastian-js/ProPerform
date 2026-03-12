@@ -41,11 +41,23 @@ router.post(
           .json({ error: "duration_minutes must be positive" });
       }
 
-      // Validiere muscle_groups falls vorhanden
-      if (muscle_groups && !Array.isArray(muscle_groups)) {
-        return res
-          .status(400)
-          .json({ error: "muscle_groups must be an array" });
+      if (muscle_groups !== undefined) {
+        if (!Array.isArray(muscle_groups)) {
+          return res
+            .status(400)
+            .json({ error: "muscle_groups must be an array" });
+        }
+
+        for (const mg of muscle_groups) {
+          if (!mg.mgid) {
+            return res
+              .status(400)
+              .json({ error: "each muscle_group must have mgid" });
+          }
+          if (mg.is_primary !== undefined && ![0, 1].includes(mg.is_primary)) {
+            return res.status(400).json({ error: "is_primary must be 0 or 1" });
+          }
+        }
       }
 
       const [result] = await db.query(
@@ -69,10 +81,10 @@ router.post(
           description,
           instructions,
           video_mid,
-          thumbnail_mid,
+          thumbnail_mid || null,
           sid,
           dlid,
-          duration_minutes,
+          duration_minutes || null,
           equipment_needed,
           createdBy,
         ],
@@ -80,7 +92,6 @@ router.post(
 
       const eid = result.insertId;
 
-      // Füge Muskelgruppen ein falls vorhanden
       if (muscle_groups && muscle_groups.length > 0) {
         const muscleGroupValues = muscle_groups.map((mg) => [
           eid,

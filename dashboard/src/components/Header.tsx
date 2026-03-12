@@ -1,6 +1,30 @@
+import { apiFetch } from "../helpers/apiFetch";
+
 export default function Header() {
-  function handleLogout() {
+  async function handleLogout() {
+    const refreshToken = localStorage.getItem("refresh_token");
+
+    if (!refreshToken) {
+      localStorage.removeItem("token");
+      window.location.href = "/login";
+      return;
+    }
+
+    const body = JSON.stringify({ refresh_token: refreshToken });
+
+    const logoutRes = await apiFetch("https://api.properform.app/auth/logout", {
+      method: "POST",
+      body: body,
+    });
+
+    if (!logoutRes.ok) {
+      alert("Error logging out. Please try again.");
+      return;
+    }
+
     localStorage.removeItem("token");
+    localStorage.removeItem("refresh_token");
+
     window.location.href = "/login";
   }
 

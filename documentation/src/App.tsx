@@ -9,34 +9,30 @@ export default function App() {
   const location = useLocation();
 
   useEffect(() => {
-    const verifyToken = async () => {
+    const initAuth = async () => {
       const token = localStorage.getItem("token");
+      const refreshToken = localStorage.getItem("refresh_token");
 
-      if (!token) {
-        console.log("no token.");
-        navigate("/login");
+      if (!token && !refreshToken) {
+        navigate("/login", { replace: true });
         return;
       }
 
       try {
-        const response = await apiFetch(
-          "https://api.properform.app/auth/verify-token",
-        );
+        const res = await apiFetch("https://api.properform.app/users/me");
 
-        if (!response.ok) {
-          console.log("invalid token.");
-          localStorage.removeItem("token");
-          navigate("/login");
+        if (!res.ok) {
+          navigate("/login", { replace: true });
         }
-      } catch (err) {
-        console.error("token verification failed:", err);
-        localStorage.removeItem("token");
-        navigate("/login");
+      } catch {
+        navigate("/login", { replace: true });
       }
     };
 
-    verifyToken();
-  }, [navigate]);
+    if (location.pathname !== "/login") {
+      initAuth();
+    }
+  }, [navigate, location.pathname]);
 
   return (
     <div className="flex h-screen bg-gray-900 text-white">

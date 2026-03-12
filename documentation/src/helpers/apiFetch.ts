@@ -2,14 +2,22 @@ export async function apiFetch(
   url: string,
   options: RequestInit = {},
 ): Promise<Response> {
-  const token = localStorage.getItem("token");
+  let token = localStorage.getItem("token");
 
   const headers: Record<string, string> = {
-    "Content-Type": "application/json",
     ...((options.headers as Record<string, string>) || {}),
   };
+
   if (token) {
     headers["Authorization"] = `Bearer ${token}`;
+  }
+
+  if (
+    options.body &&
+    !(options.body instanceof FormData) &&
+    !headers["Content-Type"]
+  ) {
+    headers["Content-Type"] = "application/json";
   }
 
   let response = await fetch(url, {
@@ -17,42 +25,43 @@ export async function apiFetch(
     headers,
   });
 
-  // Access token expired
-  if (response.status === 401) {
-    const refreshToken = localStorage.getItem("refreshToken");
+  if (response.status !== 401) {
+    return response;
+  }
 
-    if (!refreshToken) {
-      throw new Error("No refresh token available");
-    }
+  const refreshToken = localStorage.getItem("refresh_token");
 
-    const refreshResponse = await fetch("/auth/refresh", {
+  if (!refreshToken) {
+    window.location.href = "/login";
+    throw new Error("No refresh token");
+  }
+
+  const refreshResponse = await fetch(
+    "https://api.properform.app/auth/refresh",
+    {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({ refresh_token: refreshToken }),
-    });
+    },
+  );
 
-    if (!refreshResponse.ok) {
-      // refresh token invalid → logout
-      localStorage.removeItem("token");
-      localStorage.removeItem("refreshToken");
-      window.location.href = "/login";
-      throw new Error("Session expired");
-    }
-
-    const data: { access_token: string } = await refreshResponse.json();
-
-    localStorage.setItem("token", data.access_token);
-
-    headers["Authorization"] = `Bearer ${data.access_token}`;
-
-    // retry original request
-    response = await fetch(url, {
-      ...options,
-      headers,
-    });
+  if (!refreshResponse.ok) {
+    localStorage.removeItem("token");
+    localStorage.removeItem("refresh_token");
+    window.location.href = "/login";
+    throw new Error("Session expired");
   }
 
-  return response;
+  const data = await refreshResponse.json();
+
+  localStorage.setItem("token", data.access_token);
+
+  headers["Authorization"] = `Bearer ${data.access_token}`;
+
+  return fetch(url, {
+    ...options,
+    headers,
+  });
 }

@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as SecureStore from "expo-secure-store";
 
-const DEV_MODE_STATUS = false;
+const DEV_MODE_STATUS = true;
 
 export default function Index() {
   const [status, setStatus] = useState<

@@ -8,7 +8,6 @@ export default function RootLayout() {
     <OnboardingContext.Provider
       value={{
         finishOnboarding: () => router.replace("/(tabs)/HomeScreen"),
-        resetOnboarding: () => router.replace("/(onboarding)/OnboardingScreen"),
       }}
     >
       <Stack screenOptions={{ headerShown: false }} />

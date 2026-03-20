@@ -12,12 +12,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
-      - name: Sparse checkout only backend
-        run: |
-          git config core.sparseCheckout true
-          echo "backend/*" > .git/info/sparse-checkout
-          git read-tree -mu HEAD
+        with:
+          sparse-checkout: backend
+          sparse-checkout-cone-mode: false
 
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.0.3

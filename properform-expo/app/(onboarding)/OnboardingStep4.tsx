@@ -144,23 +144,19 @@ export default function OnboardingStep4() {
                 </Picker>
               </View>
             </View>
-
-            <View style={styles.navigation}>
-              <TouchableOpacity style={styles.arrowButton} onPress={handleBack}>
-                <Icon name="arrow-back" size={24} color={colors.white} />
-              </TouchableOpacity>
-
-              <ProgressDots total={6} current={3} />
-
-              <TouchableOpacity
-                style={styles.arrowButton}
-                onPress={handleContinue}
-              >
-                <Icon name="arrow-forward" size={24} color={colors.white} />
-              </TouchableOpacity>
-            </View>
           </ScrollView>
         </TouchableWithoutFeedback>
+        <View style={styles.navigation}>
+          <TouchableOpacity style={styles.arrowButton} onPress={handleBack}>
+            <Icon name="arrow-back" size={24} color={colors.white} />
+          </TouchableOpacity>
+
+          <ProgressDots total={6} current={3} />
+
+          <TouchableOpacity style={styles.arrowButton} onPress={handleContinue}>
+            <Icon name="arrow-forward" size={24} color={colors.white} />
+          </TouchableOpacity>
+        </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -204,7 +200,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     paddingBottom: spacing.lg,
-    marginTop: "auto",
     paddingTop: spacing.lg,
   },
   arrowButton: {

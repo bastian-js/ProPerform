@@ -10,6 +10,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   TouchableOpacity,
+  ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Header from "@/src/components/header";
@@ -120,11 +121,12 @@ export default function OnboardingStep5() {
         requestBody,
       );
 
-      const { token, uid } = response.data;
+      const { access_token, refresh_token, uid } = response.data;
 
       // await AsyncStorage.setItem("auth_token", token);
       // await AsyncStorage.setItem("user_id", String(uid));
-      await SecureStore.setItemAsync("auth_token", token);
+      await SecureStore.setItemAsync("access_token", String(access_token));
+      await SecureStore.setItemAsync("refresh_token", String(refresh_token));
       await SecureStore.setItemAsync("user_id", String(uid));
       await AsyncStorage.removeItem("onboarding_password");
 
@@ -229,24 +231,27 @@ export default function OnboardingStep5() {
                 <Text style={styles.errorText}>{errors.primaryGoal}</Text>
               ) : null}
             </View>
-
-            <View style={styles.navigation}>
-              <TouchableOpacity style={styles.arrowButton} onPress={handleBack}>
-                <Icon name="arrow-back" size={24} color={colors.white} />
-              </TouchableOpacity>
-
-              <ProgressDots total={6} current={4} />
-
-              <TouchableOpacity
-                style={[styles.arrowButton, loading && { opacity: 0.5 }]}
-                onPress={submitOnboarding}
-                disabled={loading}
-              >
-                <Icon name="arrow-forward" size={24} color={colors.white} />
-              </TouchableOpacity>
-            </View>
           </ScrollView>
         </TouchableWithoutFeedback>
+        <View style={styles.navigation}>
+          <TouchableOpacity style={styles.arrowButton} onPress={handleBack}>
+            <Icon name="arrow-back" size={24} color={colors.white} />
+          </TouchableOpacity>
+
+          <ProgressDots total={6} current={4} />
+
+          <TouchableOpacity
+            style={[styles.arrowButton, loading && { opacity: 0.5 }]}
+            onPress={submitOnboarding}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator size="small" color={colors.white} />
+            ) : (
+              <Icon name="arrow-forward" size={24} color={colors.white} />
+            )}
+          </TouchableOpacity>
+        </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -290,7 +295,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     paddingBottom: spacing.lg,
-    marginTop: "auto",
     paddingTop: spacing.lg,
   },
   arrowButton: {

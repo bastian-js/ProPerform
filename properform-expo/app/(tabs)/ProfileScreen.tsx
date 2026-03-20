@@ -7,15 +7,16 @@ import {
   TouchableOpacity,
   ScrollView,
   Alert,
+  ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import SecondaryButton from "@/src/components/secondaryButton";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
 import { spacing } from "@/src/theme/spacing";
 import { colors } from "@/src/theme/colors";
 import axios from "axios";
 import * as SecureStore from "expo-secure-store";
+import api from "@/src/utils/axiosInstance";
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -26,20 +27,28 @@ export default function ProfileScreen() {
     profile_image_url: string | null;
     created_at: string;
   } | null>(null);
+  const [loading, setLoading] = React.useState(true);
+  const [loadingResetPassword, setLoadingResetPassword] = React.useState(false);
 
   useEffect(() => {
     const getUser = async () => {
-      const token = await SecureStore.getItemAsync("auth_token");
-      const response = await axios.get("https://api.properform.app/users/me", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setUser(response.data);
+      try {
+        const response = await api.get("/users/me");
+        setUser(response.data);
+      } catch (err) {
+        console.log("Fehler beim Laden des Profils:", err);
+      } finally {
+        setLoading(false);
+      }
     };
     getUser();
   }, []);
 
   const handleResetPassword = async () => {
+    if (loadingResetPassword) return;
+
     try {
+      setLoadingResetPassword(true);
       await axios.post("https://api.properform.app/auth/reset-password", {
         email: user?.email,
       });
@@ -50,23 +59,34 @@ export default function ProfileScreen() {
         err.response?.data?.error ||
           "Etwas ist schiefgelaufen, versuch es nochmal.",
       );
+    } finally {
+      setLoadingResetPassword(false);
     }
   };
 
   const handleLogout = async () => {
     try {
-      await SecureStore.deleteItemAsync("auth_token");
+      await SecureStore.deleteItemAsync("access_token");
+      await SecureStore.deleteItemAsync("refresh_token");
       await SecureStore.deleteItemAsync("user_id");
-
-      await AsyncStorage.removeItem("onboardingFinished");
 
       console.log("Logout erfolgreich");
 
-      router.replace("../(onboarding)/OnboardingScreen");
+      router.replace("../(auth)/LoginScreen");
     } catch {
       console.log("Fehler Logout", "Logout fehgeschlagen");
     }
   };
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container} edges={["top"]}>
+        <View style={styles.loaderContainer}>
+          <ActivityIndicator size="large" color={colors.primaryBlue} />
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
@@ -126,7 +146,12 @@ export default function ProfileScreen() {
         <View style={styles.changePasswordWrap}>
           <SecondaryButton
             onPress={handleResetPassword}
-            text="Passwort ändern"
+            text={loadingResetPassword ? "Wird gesendet..." : "Passwort ändern"}
+            icon={
+              loadingResetPassword ? (
+                <ActivityIndicator size="small" color={colors.primaryBlue} />
+              ) : undefined
+            }
           />
         </View>
 
@@ -141,12 +166,17 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: colors.background,
+  },
+  loaderContainer: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
   },
   content: {
     flex: 1,
-    paddingHorizontal: 20,
-    paddingTop: 30,
+    paddingHorizontal: spacing.screenPaddingHorizontal,
+    paddingTop: spacing.screenPaddingTop,
   },
   containerImage: {
     alignItems: "center",

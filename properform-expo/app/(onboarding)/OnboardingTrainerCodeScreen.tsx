@@ -11,6 +11,7 @@ import {
   Platform,
   TouchableOpacity,
   TextInput,
+  ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Header from "@/src/components/header";
@@ -22,6 +23,7 @@ import { colors } from "@/src/theme/colors";
 import { MaterialIcons as Icon } from "@expo/vector-icons";
 import axios from "axios";
 import * as SecureStore from "expo-secure-store";
+import api from "@/src/utils/axiosInstance";
 
 export default function OnboardingTrainerCodeScreen() {
   const router = useRouter();
@@ -69,13 +71,8 @@ export default function OnboardingTrainerCodeScreen() {
   const handleConnect = async () => {
     try {
       setLoadingConnect(true);
-      const token = await SecureStore.getItemAsync("auth_token");
       const inviteCode = `TRN-${code.slice(0, 3)}-${code.slice(3)}`;
-      await axios.post(
-        "https://api.properform.app/trainers/connect",
-        { invite_code: inviteCode },
-        { headers: { Authorization: `Bearer ${token}` } },
-      );
+      await api.post("/trainers/connect", { invite_code: inviteCode });
       router.push("../(onboarding)/VerifyEmailScreen");
     } catch (err: any) {
       console.log("STATUS:", err.response?.status);
@@ -147,9 +144,11 @@ export default function OnboardingTrainerCodeScreen() {
                   onPress={handleCheckCode}
                   disabled={loading || code.length < 6}
                 >
-                  <Text style={styles.checkButtonText}>
-                    {loading ? "..." : "Prüfen"}
-                  </Text>
+                  {loading ? (
+                    <ActivityIndicator size="small" color={colors.white} />
+                  ) : (
+                    <Text style={styles.checkButtonText}>Prüfen</Text>
+                  )}
                 </TouchableOpacity>
               </View>
 
@@ -199,7 +198,11 @@ export default function OnboardingTrainerCodeScreen() {
                 onPress={handleConnect}
                 disabled={!trainer || loadingConnect}
               >
-                <Icon name="arrow-forward" size={24} color={colors.white} />
+                {loadingConnect ? (
+                  <ActivityIndicator size="small" color={colors.white} />
+                ) : (
+                  <Icon name="arrow-forward" size={24} color={colors.white} />
+                )}
               </TouchableOpacity>
             </View>
           </ScrollView>

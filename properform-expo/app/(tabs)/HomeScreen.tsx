@@ -1,41 +1,71 @@
-import React, { useEffect } from "react";
-import { View, Text, StyleSheet, ScrollView, Image } from "react-native";
+import React, { useCallback, useEffect, useState } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  Image,
+  ActivityIndicator,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { typography } from "@/src/theme/typography";
 import { spacing } from "@/src/theme/spacing";
 import { colors } from "@/src/theme/colors";
 import SecondaryButton from "@/src/components/secondaryButton";
-import axios from "axios";
-import * as SecureStore from "expo-secure-store";
+import api from "@/src/utils/axiosInstance";
+import { useFocusEffect } from "expo-router";
 
 export default function HomeScreen() {
-  const [user, setUser] = React.useState<{
+  const [user, setUser] = useState<{
     firstname: string;
     profile_image_url: string | null;
   } | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const [greeting, setGreeting] = useState("");
 
   useEffect(() => {
     const getUserData = async () => {
-      const token = await SecureStore.getItemAsync("auth_token");
-      const response = await axios.get("https://api.properform.app/users/me", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setUser(response.data);
+      try {
+        const response = await api.get("/users/me");
+        setUser(response.data);
+      } catch (err) {
+        console.log("Fehler beim Laden der User-Daten:", err);
+      } finally {
+        setLoading(false);
+      }
     };
+
     getUserData();
   }, []);
 
-  const getGreeting = () => {
+  const calculateGreeting = () => {
     const hour = new Date().getHours();
     if (hour < 12) return "Guten Morgen,";
     if (hour < 18) return "Guten Tag,";
     return "Guten Abend,";
   };
 
+  useFocusEffect(
+    useCallback(() => {
+      setGreeting(calculateGreeting());
+    }, []),
+  );
+
   // dummy values for streak
   const streakDays = 4;
   const days = ["M", "D", "M", "D", "F", "S", "S"];
   const completed = [true, true, true, true, false, false, false];
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container} edges={["top"]}>
+        <View style={styles.loaderContainer}>
+          <ActivityIndicator size="large" color={colors.primaryBlue} />
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
@@ -56,7 +86,7 @@ export default function HomeScreen() {
           />
 
           <View style={styles.greetingBlock}>
-            <Text style={styles.goodMorning}>{getGreeting()}</Text>
+            <Text style={styles.goodMorning}>{greeting}</Text>
             <Text style={styles.hello}>{user?.firstname || "..."}</Text>
           </View>
         </View>
@@ -132,6 +162,11 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
+  },
+  loaderContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
   },
 
   scrollContent: {

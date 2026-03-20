@@ -9,6 +9,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   TouchableOpacity,
+  ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Header from "@/src/components/header";
@@ -48,16 +49,19 @@ export default function LoginScreen() {
         },
       );
 
-      const { token, uid } = response.data;
-      console.log("Login success");
+      const { access_token, refresh_token, uid } = response.data;
+      console.log("Login success for UID:", uid);
 
       // await AsyncStorage.setItem("auth_token", token);
       // await AsyncStorage.setItem("user_id", String(uid));
       // ^ switch to secure store for sensitive data
-      await SecureStore.setItemAsync("auth_token", token);
+      await SecureStore.setItemAsync("access_token", String(access_token));
+      await SecureStore.setItemAsync("refresh_token", String(refresh_token));
       await SecureStore.setItemAsync("user_id", String(uid));
 
       if (stayLoggedIn) await AsyncStorage.setItem("stay_logged_in", "true");
+
+      await AsyncStorage.setItem("onboardingFinished", "true");
 
       router.replace("/(tabs)/HomeScreen");
     } catch (err: any) {
@@ -132,7 +136,13 @@ export default function LoginScreen() {
             <View style={styles.navigation}>
               <TouchableOpacity
                 style={styles.arrowButton}
-                onPress={() => router.back()}
+                onPress={() => {
+                  if (router.canGoBack()) {
+                    router.back();
+                  } else {
+                    router.replace("../(onboarding)/OnboardingScreen");
+                  }
+                }}
               >
                 <Icon name="arrow-back" size={24} color={colors.white} />
               </TouchableOpacity>
@@ -142,7 +152,11 @@ export default function LoginScreen() {
                 onPress={handleLogin}
                 disabled={loading}
               >
-                <Icon name="arrow-forward" size={24} color={colors.white} />
+                {loading ? (
+                  <ActivityIndicator size="small" color={colors.white} />
+                ) : (
+                  <Icon name="arrow-forward" size={24} color={colors.white} />
+                )}
               </TouchableOpacity>
             </View>
           </ScrollView>

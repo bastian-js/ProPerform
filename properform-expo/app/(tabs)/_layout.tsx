@@ -54,7 +54,7 @@ export default function TabLayout() {
 
         console.log("🎟 Expo push token:", token);
 
-        const jwt = await SecureStore.getItemAsync("auth_token");
+        const jwt = await SecureStore.getItemAsync("access_token");
         console.log("🔐 JWT found:", !!jwt);
 
         if (!jwt) {
@@ -116,6 +116,16 @@ export default function TabLayout() {
           title: "Home",
           tabBarIcon: ({ color }) => (
             <Icon name="home" color={color} size={28} />
+          ),
+        }}
+      />
+
+      <Tabs.Screen
+        name="ExerciseScreen"
+        options={{
+          title: "Exercises",
+          tabBarIcon: ({ color }) => (
+            <Icon name="fitness-center" color={color} size={28} />
           ),
         }}
       />

@@ -1,30 +1,40 @@
 import { Redirect } from "expo-router";
 import { useEffect, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as SecureStore from "expo-secure-store";
 
-const DEV_MODE_STATUS = true; // false setzen für normal, true dev mode
+const DEV_MODE_STATUS = true;
 
 export default function Index() {
-  const [ready, setReady] = useState(false);
-  const [finished, setFinished] = useState(false);
+  const [status, setStatus] = useState<
+    "loading" | "home" | "login" | "onboarding" | "dev"
+  >("loading");
 
   useEffect(() => {
     (async () => {
+      if (__DEV__ && DEV_MODE_STATUS) {
+        setStatus("dev");
+        return;
+      }
+
+      const token = await SecureStore.getItemAsync("access_token");
+      if (token) {
+        setStatus("home");
+        return;
+      }
+
       const value = await AsyncStorage.getItem("onboardingFinished");
-      setFinished(value === "true");
-      setReady(true);
+      if (value === "true") {
+        setStatus("login");
+      } else {
+        setStatus("onboarding");
+      }
     })();
   }, []);
 
-  if (!ready) return null;
-
-  if (__DEV__ && DEV_MODE_STATUS) {
-    return <Redirect href="/dev-menu" />;
-  }
-
-  if (!finished) {
-    return <Redirect href="/(onboarding)/OnboardingScreen" />;
-  }
-
-  return <Redirect href="/(tabs)/HomeScreen" />;
+  if (status === "loading") return null;
+  if (status === "dev") return <Redirect href="/dev-menu" />;
+  if (status === "home") return <Redirect href="/(tabs)/HomeScreen" />;
+  if (status === "login") return <Redirect href="/(auth)/LoginScreen" />;
+  return <Redirect href="/(onboarding)/OnboardingScreen" />;
 }

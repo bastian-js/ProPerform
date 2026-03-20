@@ -1,36 +1,16 @@
-import { Stack } from "expo-router";
-import { useEffect, useState } from "react";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Stack, useRouter } from "expo-router";
 import { OnboardingContext } from "../src/context/OnboardingContext";
 
 export default function RootLayout() {
-  const [showOnboarding, setShowOnboarding] = useState<boolean | null>(null);
-
-  useEffect(() => {
-    (async () => {
-      const finished = await AsyncStorage.getItem("onboardingFinished");
-      setShowOnboarding(finished !== "true");
-    })();
-  }, []);
-
-  if (showOnboarding === null) {
-    return null;
-  }
+  const router = useRouter();
 
   return (
     <OnboardingContext.Provider
       value={{
-        finishOnboarding: () => setShowOnboarding(false),
-        resetOnboarding: () => setShowOnboarding(true),
+        finishOnboarding: () => router.replace("/(tabs)/HomeScreen"),
       }}
     >
-      <Stack screenOptions={{ headerShown: false }}>
-        {showOnboarding ? (
-          <Stack.Screen name="(onboarding)"></Stack.Screen>
-        ) : (
-          <Stack.Screen name="(tabs)"></Stack.Screen>
-        )}
-      </Stack>
+      <Stack screenOptions={{ headerShown: false }} />
     </OnboardingContext.Provider>
   );
 }

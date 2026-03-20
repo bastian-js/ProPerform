@@ -11,6 +11,7 @@ import {
   TouchableOpacity,
   TextInput,
   Alert,
+  ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Header from "@/src/components/header";
@@ -23,6 +24,7 @@ import { colors } from "@/src/theme/colors";
 import { MaterialIcons as Icon } from "@expo/vector-icons";
 import axios from "axios";
 import { OnboardingContext } from "@/src/context/OnboardingContext";
+import api from "@/src/utils/axiosInstance";
 
 export default function VerifyEmailScreen() {
   const router = useRouter();
@@ -149,9 +151,11 @@ export default function VerifyEmailScreen() {
               style={styles.resendWrap}
               disabled={loadingResend}
             >
-              <Text style={styles.resendText}>
-                {loadingResend ? "Wird gesendet..." : "Code erneut senden"}
-              </Text>
+              {loadingResend ? (
+                <ActivityIndicator size="small" color={colors.primaryBlue} />
+              ) : (
+                <Text style={styles.resendText}>Code erneut senden</Text>
+              )}
             </TouchableOpacity>
 
             <View style={styles.navigation}>
@@ -169,7 +173,11 @@ export default function VerifyEmailScreen() {
                 onPress={handleVerify}
                 disabled={code.length !== 6 || loading}
               >
-                <Icon name="arrow-forward" size={24} color={colors.white} />
+                {loading ? (
+                  <ActivityIndicator size="small" color={colors.white} />
+                ) : (
+                  <Icon name="arrow-forward" size={24} color={colors.white} />
+                )}
               </TouchableOpacity>
             </View>
           </ScrollView>

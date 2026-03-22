@@ -29,7 +29,7 @@ router.put("/:tpid", requireAuth, async (req, res) => {
 
   try {
     const [result] = await db.query(
-      "UPDATE training_plans SET name = ?, description = ?, sport_id = ?, difficulty_level_id = ?, duration_weeks = ?, sessions_per_week = ? WHERE tpid = ? AND user_id = ?",
+      "UPDATE training_plans SET name = ?, description = ?, sport_id = ?, difficulty_level_id = ?, duration_weeks = ?, sessions_per_week = ? WHERE tpid = ? AND created_by_user = ?",
       [
         name,
         description,

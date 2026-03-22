@@ -10,7 +10,7 @@ router.delete("/:tpid", requireAuth, async (req, res) => {
 
   try {
     const [result] = await db.query(
-      "DELETE FROM training_plans WHERE id = ? AND user_id = ?",
+      "DELETE FROM training_plans WHERE tpid = ? AND user_id = ?",
       [tpid, userId],
     );
 

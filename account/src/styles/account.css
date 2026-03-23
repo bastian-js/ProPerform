@@ -256,6 +256,20 @@
   animation: fadeUp 0.2s ease both;
 }
 
+.account-warning {
+  font-size: 13px;
+  color: rgba(251, 146, 60, 0.95);
+  background: rgba(251, 146, 60, 0.08);
+  border: 1px solid rgba(251, 146, 60, 0.28);
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  animation: fadeUp 0.2s ease both;
+}
+
 .account-error {
   font-size: 13px;
   color: rgba(239, 68, 68, 0.9);

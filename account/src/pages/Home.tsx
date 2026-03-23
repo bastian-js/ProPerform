@@ -7,6 +7,7 @@ import {
   Calendar,
   Check,
   AlertCircle,
+  AlertTriangle,
   Ruler,
   Scale,
   Dumbbell,
@@ -45,6 +46,9 @@ export default function Account() {
   const [resetLoading, setResetLoading] = useState(false);
   const [resetSuccess, setResetSuccess] = useState("");
   const [resetError, setResetError] = useState("");
+  const [logoutAllLoading, setLogoutAllLoading] = useState(false);
+  const [logoutAllInfo, setLogoutAllInfo] = useState("");
+  const [logoutAllError, setLogoutAllError] = useState("");
 
   useEffect(() => {
     fetchUser();
@@ -119,6 +123,37 @@ export default function Account() {
     }
 
     setResetLoading(false);
+  };
+
+  const handleLogoutEverywhere = async () => {
+    setLogoutAllLoading(true);
+    setLogoutAllInfo("");
+    setLogoutAllError("");
+
+    try {
+      const res = await apiFetch("https://api.properform.app/auth/logout/all", {
+        method: "POST",
+      });
+
+      let data: { message?: string; error?: string } | null = null;
+      try {
+        data = await res.json();
+      } catch {
+        data = null;
+      }
+
+      if (!res.ok) {
+        setLogoutAllError(
+          data?.message || data?.error || "Could not sign out all devices.",
+        );
+      } else {
+        setLogoutAllInfo("This might take a while to affect all devices.");
+      }
+    } catch {
+      setLogoutAllError("Network error. Please try again.");
+    }
+
+    setLogoutAllLoading(false);
   };
 
   const formatDate = (dateString: string | null | undefined) => {
@@ -408,6 +443,20 @@ export default function Account() {
               </div>
             )}
 
+            {logoutAllInfo && (
+              <div className="account-warning">
+                <AlertTriangle size={14} />
+                {logoutAllInfo}
+              </div>
+            )}
+
+            {logoutAllError && (
+              <div className="account-error">
+                <AlertCircle size={14} />
+                {logoutAllError}
+              </div>
+            )}
+
             <div className="account-actions">
               <button
                 className="account-btn-secondary"
@@ -417,9 +466,15 @@ export default function Account() {
                 <Lock size={14} />
                 {resetLoading ? "Sending email..." : "Change Password"}
               </button>
-              <button className="account-btn-secondary account-btn-danger">
+              <button
+                className="account-btn-secondary account-btn-danger"
+                onClick={handleLogoutEverywhere}
+                disabled={logoutAllLoading}
+              >
                 <LogOut size={14} />
-                Sign Out Everywhere
+                {logoutAllLoading
+                  ? "Signing out everywhere..."
+                  : "Sign Out Everywhere"}
               </button>
             </div>
           </div>

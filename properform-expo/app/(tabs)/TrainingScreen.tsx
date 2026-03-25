@@ -6,6 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
+  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons as Icon } from "@expo/vector-icons";
@@ -71,6 +72,46 @@ export default function TrainingScreen() {
       setLoading(false);
     }
   }, []);
+
+  const handleDeletePlan = async (tpid: number) => {
+    Alert.alert(
+      "Plan löschen",
+      "Möchtest du diesen Trainingsplan wirklich unwiderruflich löschen?",
+      [
+        { text: "Abbrechen", style: "cancel" },
+        {
+          text: "Löschen",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await api.delete(`/training-plans/${tpid}`);
+              fetchPlans(); // Liste aktualisieren
+            } catch (err) {
+              Alert.alert("Fehler", "Plan konnte nicht gelöscht werden.");
+            }
+          },
+        },
+      ],
+    );
+  };
+
+  const handleMorePress = (plan: TrainingPlan) => {
+    Alert.alert(plan.name, "Was möchtest du tun?", [
+      { text: "Abbrechen", style: "cancel" },
+      {
+        text: "Bearbeiten",
+        onPress: () => {
+          // TODO: Edit
+          console.log("Edit plan", plan.tpid);
+        },
+      },
+      {
+        text: "Löschen",
+        style: "destructive",
+        onPress: () => handleDeletePlan(plan.tpid),
+      },
+    ]);
+  };
 
   useEffect(() => {
     fetchPlans();
@@ -188,12 +229,19 @@ export default function TrainingScreen() {
                     </Text>
                   </View>
 
-                  <Icon
-                    name="more-vert"
-                    size={22}
-                    color={colors.textSecondary}
-                    style={styles.morevert} // TODO: auswahl bearbeiten löschen
-                  />
+                  <TouchableOpacity
+                    onPress={(e) => {
+                      e.stopPropagation();
+                      handleMorePress(plan);
+                    }}
+                    style={styles.morevert}
+                  >
+                    <Icon
+                      name="more-vert"
+                      size={24}
+                      color={colors.textSecondary}
+                    />
+                  </TouchableOpacity>
                 </TouchableOpacity>
               ))}
             </ScrollView>

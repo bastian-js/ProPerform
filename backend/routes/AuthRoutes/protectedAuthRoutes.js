@@ -21,20 +21,24 @@ router.get("/verify-token", requireAuth, async (req, res) => {
 });
 
 router.post("/push-token", requireAuth, async (req, res) => {
-  const { token } = req.body;
+  const { token, projectId } = req.body;
 
   if (!token) {
     return res.status(400).json({ message: "token is required." });
   }
 
+  if (!projectId) {
+    return res.status(400).json({ message: "projectId is required." });
+  }
+
   try {
     await db.query(
       `
-      INSERT INTO push_tokens (uid, expo_push_token) 
-      VALUES (?, ?)
-      ON DUPLICATE KEY UPDATE expo_push_token = ?
+      INSERT INTO push_tokens (uid, expo_push_token, project_id) 
+      VALUES (?, ?, ?)
+      ON DUPLICATE KEY UPDATE expo_push_token = ?, project_id = ?
       `,
-      [req.user.uid, token, token],
+      [req.user.uid, token, projectId, token, projectId],
     );
 
     res.status(200).json({ success: true });

@@ -46,7 +46,7 @@ router.post(
 
     const [tokens] = await db.query(
       `
-        SELECT expo_push_token FROM push_tokens WHERE uid IN (?)
+        SELECT expo_push_token, project_id FROM push_tokens WHERE uid IN (?)
         `,
       [users.map((u) => u.uid)],
     );

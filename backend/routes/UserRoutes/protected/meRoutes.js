@@ -86,4 +86,94 @@ router.get("/me/trainer", requireAuth, async (req, res) => {
   }
 });
 
+const allowedFitnessLevels = ["beginner", "intermediate", "advanced"];
+
+router.put("/me", requireAuth, async (req, res) => {
+  const uid = req.user.uid;
+
+  let { weight, height, fitness_level, training_frequency, primary_goal } =
+    req.body;
+
+  try {
+    const updates = [];
+    const values = [];
+
+    if (fitness_level !== undefined) {
+      if (!allowedFitnessLevels.includes(fitness_level)) {
+        return res.status(400).json({
+          message:
+            "fitness_level has to be one of the available fitness levels",
+          allowedFitnessLevels,
+        });
+      }
+
+      updates.push("fitness_level = ?");
+      values.push(fitness_level);
+    }
+
+    if (weight !== undefined) {
+      if (typeof weight !== "number" || weight <= 0) {
+        return res
+          .status(400)
+          .json({ message: "weight must be a positive number." });
+      }
+
+      updates.push("weight = ?");
+      values.push(weight);
+    }
+
+    if (height !== undefined) {
+      if (typeof height !== "number" || height <= 0) {
+        return res
+          .status(400)
+          .json({ message: "height must be a positive number." });
+      }
+
+      updates.push("height = ?");
+      values.push(height);
+    }
+
+    if (training_frequency !== undefined) {
+      if (
+        typeof training_frequency !== "number" ||
+        training_frequency < 0 ||
+        training_frequency > 14
+      ) {
+        return res.status(400).json({
+          message: "training_frequency must be a number between 0 and 14.",
+        });
+      }
+
+      updates.push("training_frequency = ?");
+      values.push(training_frequency);
+    }
+
+    if (primary_goal !== undefined) {
+      if (typeof primary_goal !== "string" || primary_goal.trim() === "") {
+        return res
+          .status(400)
+          .json({ message: "primary_goal must be a non-empty string." });
+      }
+
+      updates.push("primary_goal = ?");
+      values.push(primary_goal);
+    }
+
+    if (updates.length === 0) {
+      return res.status(400).json({ message: "no valid fields to update." });
+    }
+
+    values.push(uid);
+
+    const sql = `UPDATE users SET ${updates.join(", ")} WHERE uid = ?`;
+
+    await db.execute(sql, values);
+
+    return res.status(200).json({ message: "user updated successfully." });
+  } catch (err) {
+    console.error("update user error.", err);
+    return res.status(500).json({ message: "failed to update user." });
+  }
+});
+
 export default router;

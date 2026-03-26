@@ -165,20 +165,21 @@ export default function ExerciseDetailModal({
                 <Text style={styles.cardText}>{exercise.equipment_needed}</Text>
               </View>
             </View>
+
+            {/* Videoanleitung */}
+            {exercise.video_url && (
+              <View style={styles.card}>
+                <Text style={styles.cardTitle}>Videoanleitung</Text>
+                <VideoView
+                  player={player}
+                  style={styles.video}
+                  allowsFullscreen
+                  allowsPictureInPicture
+                  startsPictureInPictureAutomatically
+                />
+              </View>
+            )}
           </ScrollView>
-          {/* Videoanleitung */}
-          {exercise.video_url && (
-            <View style={styles.card}>
-              <Text style={styles.cardTitle}>Videoanleitung</Text>
-              <VideoView
-                player={player}
-                style={styles.video}
-                allowsFullscreen
-                allowsPictureInPicture
-                startsPictureInPictureAutomatically
-              />
-            </View>
-          )}
         </View>
       </View>
     </Modal>
@@ -222,14 +223,15 @@ const styles = StyleSheet.create({
   imageContainer: {
     borderRadius: 16,
     overflow: "hidden",
+    alignSelf: "center",
   },
   image: {
-    width: "100%",
-    height: 220,
+    width: 260,
+    height: 160,
   },
   imagePlaceholder: {
-    width: "100%",
-    height: 220,
+    width: 260,
+    height: 160,
     backgroundColor: colors.white,
     alignItems: "center",
     justifyContent: "center",

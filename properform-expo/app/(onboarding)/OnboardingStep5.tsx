@@ -28,11 +28,14 @@ import * as SecureStore from "expo-secure-store";
 export default function OnboardingStep5() {
   const router = useRouter();
 
+  const LOG_PREFIX = "[OnboardingStep5]";
+
   const [fitnessLevel, setFitnessLevel] = React.useState("");
   const [trainingFrequency, setTrainingFrequency] = React.useState<number | "">(
     "",
   );
   const [primaryGoal, setPrimaryGoal] = React.useState("");
+  const [stayLoggedIn, setStayLoggedIn] = React.useState(false);
 
   const [errors, setErrors] = React.useState({
     fitnessLevel: "",
@@ -43,6 +46,15 @@ export default function OnboardingStep5() {
   const [loading, setLoading] = React.useState(false);
 
   const submitOnboarding = async () => {
+    let requestBodyForLog: Record<string, unknown> | null = null;
+
+    console.log(`${LOG_PREFIX} submitOnboarding called`, {
+      fitnessLevel,
+      trainingFrequency,
+      primaryGoal,
+      stayLoggedIn,
+    });
+
     const newErrors = {
       fitnessLevel: "",
       trainingFrequency: "",
@@ -66,16 +78,25 @@ export default function OnboardingStep5() {
     }
 
     setErrors(newErrors);
-    if (hasError) return;
+    if (hasError) {
+      console.log(`${LOG_PREFIX} validation failed`, newErrors);
+      return;
+    }
 
     try {
       setLoading(true);
+      console.log(
+        `${LOG_PREFIX} loading=true, starting persistence + register`,
+      );
 
       await AsyncStorage.multiSet([
         ["onboarding_fitnessLevel", fitnessLevel],
         ["onboarding_trainingFrequency", trainingFrequency.toString()],
         ["onboarding_primaryGoal", primaryGoal],
       ]);
+      console.log(
+        `${LOG_PREFIX} onboarding step values persisted in AsyncStorage`,
+      );
 
       const entries = await AsyncStorage.multiGet([
         "onboarding_firstName",
@@ -88,6 +109,16 @@ export default function OnboardingStep5() {
       ]);
 
       const data = Object.fromEntries(entries);
+      console.log(`${LOG_PREFIX} loaded onboarding base data`, {
+        onboarding_firstName: data.onboarding_firstName,
+        onboarding_email: data.onboarding_email,
+        onboarding_password_present: Boolean(data.onboarding_password),
+        onboarding_password_length: data.onboarding_password?.length ?? 0,
+        onboarding_birthDate: data.onboarding_birthDate,
+        onboarding_height: data.onboarding_height,
+        onboarding_weight: data.onboarding_weight,
+        onboarding_gender: data.onboarding_gender,
+      });
 
       if (
         !data.onboarding_firstName ||
@@ -98,6 +129,7 @@ export default function OnboardingStep5() {
         !data.onboarding_weight ||
         !data.onboarding_gender
       ) {
+        console.log(`${LOG_PREFIX} missing onboarding data`, data);
         Alert.alert("Fehler", "Onboarding-Daten fehlen.");
         return;
       }
@@ -114,12 +146,27 @@ export default function OnboardingStep5() {
         fitness_level: fitnessLevel,
         training_frequency: Number(trainingFrequency),
         primary_goal: primaryGoal,
+        stayLoggedIn,
       };
+      requestBodyForLog = {
+        ...requestBody,
+        password: "[redacted]",
+      };
+      console.log(`${LOG_PREFIX} register request body`, {
+        ...requestBodyForLog,
+      });
 
+      console.log(`${LOG_PREFIX} sending POST /auth/register`);
       const response = await axios.post(
         "https://api.properform.app/auth/register",
         requestBody,
       );
+      console.log(`${LOG_PREFIX} register success`, {
+        status: response.status,
+        hasAccessToken: Boolean(response.data?.access_token),
+        hasRefreshToken: Boolean(response.data?.refresh_token),
+        uid: response.data?.uid,
+      });
 
       const { access_token, refresh_token, uid } = response.data;
 
@@ -129,23 +176,36 @@ export default function OnboardingStep5() {
       await SecureStore.setItemAsync("refresh_token", String(refresh_token));
       await SecureStore.setItemAsync("user_id", String(uid));
       await AsyncStorage.removeItem("onboarding_password");
+      console.log(`${LOG_PREFIX} tokens saved, onboarding password removed`);
 
       router.push("../(onboarding)/OnboardingTrainingModeScreen");
+      console.log(`${LOG_PREFIX} navigated to OnboardingTrainingModeScreen`);
     } catch (error: any) {
+      console.log(`${LOG_PREFIX} register failed`, {
+        message: error?.message,
+        code: error?.code,
+        name: error?.name,
+      });
+
       if (error.response) {
         console.log("STATUS:", error.response.status);
         console.log("DATA:", error.response.data);
         console.log("HEADERS:", error.response.headers);
+        console.log("REQUEST URL:", error.config?.url);
+        console.log("REQUEST METHOD:", error.config?.method);
+        console.log("REQUEST BODY:", requestBodyForLog);
 
         Alert.alert("Serverfehler bei der Registrierung");
       } else {
         console.log("ERROR:", error.message);
+        console.log("NETWORK/UNKNOWN ERROR FULL:", error);
         Alert.alert(
           "Keine Antwort vom Server. Bitte überprüfe deine Internetverbindung.",
         );
       }
     } finally {
       setLoading(false);
+      console.log(`${LOG_PREFIX} loading=false`);
     }
   };
 
@@ -231,6 +291,19 @@ export default function OnboardingStep5() {
                 <Text style={styles.errorText}>{errors.primaryGoal}</Text>
               ) : null}
             </View>
+
+            <TouchableOpacity
+              style={styles.checkboxRow}
+              onPress={() => setStayLoggedIn((prev) => !prev)}
+              activeOpacity={0.8}
+            >
+              <Icon
+                name={stayLoggedIn ? "check-box" : "check-box-outline-blank"}
+                size={24}
+                color={colors.primaryBlue}
+              />
+              <Text style={styles.checkboxLabel}>Stay logged in</Text>
+            </TouchableOpacity>
           </ScrollView>
         </TouchableWithoutFeedback>
         <View style={styles.navigation}>
@@ -327,5 +400,16 @@ const styles = StyleSheet.create({
   pickerItem: {
     fontSize: 16,
     color: "#333",
+  },
+  checkboxRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: spacing.lg,
+    marginLeft: 4,
+    gap: spacing.xs,
+  },
+  checkboxLabel: {
+    ...typography.body,
+    color: colors.black,
   },
 });

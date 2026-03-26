@@ -72,7 +72,7 @@ export default function ProfileScreen() {
 
       console.log("Logout erfolgreich");
 
-      router.replace("../(auth)/LoginScreen");
+      router.replace("../(onboarding)/OnboardingScreen");
     } catch {
       console.log("Fehler Logout", "Logout fehgeschlagen");
     }

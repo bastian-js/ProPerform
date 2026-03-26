@@ -78,6 +78,20 @@ export default function ProfileScreen() {
     }
   };
 
+  const confirmLogout = () => {
+    Alert.alert("Abmelden", "Möchtest du dich wirklich abmelden?", [
+      {
+        text: "Abbrechen",
+        style: "cancel",
+      },
+      {
+        text: "Abmelden",
+        style: "destructive",
+        onPress: handleLogout,
+      },
+    ]);
+  };
+
   if (loading) {
     return (
       <SafeAreaView style={styles.container} edges={["top"]}>
@@ -155,7 +169,7 @@ export default function ProfileScreen() {
           />
         </View>
 
-        <TouchableOpacity onPress={handleLogout} style={styles.logoutWrap}>
+        <TouchableOpacity onPress={confirmLogout} style={styles.logoutWrap}>
           <Text style={styles.logoutText}>Abmelden</Text>
         </TouchableOpacity>
       </ScrollView>

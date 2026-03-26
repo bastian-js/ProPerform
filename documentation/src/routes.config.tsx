@@ -52,6 +52,7 @@ import GetUsers from "./pages/api-reference/users/get-users";
 import GetUsersRole from "./pages/api-reference/users/get-users-role";
 import GetUsersStats from "./pages/api-reference/users/get-users-stats";
 import GetUsersMeTrainer from "./pages/api-reference/users/get-users-me-trainer";
+import PutUsersMe from "./pages/api-reference/users/put-users-me";
 
 // weight
 import GetLogsWeight from "./pages/api-reference/weight/get-logs-weight";
@@ -127,6 +128,7 @@ export const apiRoutes = [
   { path: "api/users", element: <GetUsers /> },
   { path: "api/users/:role", element: <GetUsersRole /> },
   { path: "api/users/me", element: <GetUsersMe /> },
+  { path: "api/users/me/update", element: <PutUsersMe /> },
   { path: "api/users/me/trainer", element: <GetUsersMeTrainer /> },
   { path: "api/users/stats", element: <GetUsersStats /> },
   { path: "api/users/delete/:uid", element: <DeleteUsersUid /> },

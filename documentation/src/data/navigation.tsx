@@ -101,6 +101,7 @@ export const navLinks: NavLink[] = [
           { to: "/api/users", label: "GET /users" },
           { to: "/api/users/:role", label: "GET /users/:role" },
           { to: "/api/users/me", label: "GET /users/me" },
+          { to: "/api/users/me/update", label: "PUT /users/me" },
           { to: "/api/users/me/trainer", label: "GET /users/me/trainer" },
           { to: "/api/users/stats", label: "GET /users/stats" },
           { to: "/api/users/delete/:uid", label: "DELETE /users/:uid" },

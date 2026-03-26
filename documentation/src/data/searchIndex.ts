@@ -104,6 +104,13 @@ export const searchIndex: SearchIndexItem[] = [
       "Get current user profile, fetch my profile, user information, current user data, authenticated user details",
   },
   {
+    to: "/api/users/me/update",
+    label: "PUT /users/me",
+    category: "API Reference → Users",
+    content:
+      "Update current user profile, edit my profile, update weight height fitness_level training_frequency primary_goal, authenticated user update",
+  },
+  {
     to: "/api/users/stats",
     label: "GET /users/stats",
     category: "API Reference → Users",

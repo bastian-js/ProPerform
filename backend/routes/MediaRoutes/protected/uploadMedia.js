@@ -13,7 +13,7 @@ const router = express.Router();
 router.post(
   "/",
   requireAuth,
-  requireRole("owner"),
+  requireRole("owner", "trainer"),
   upload.single("file"),
   async (req, res) => {
     try {
@@ -38,17 +38,23 @@ router.post(
 
       const fileName = req.file.filename;
 
+      const createdByUser = req.user.uid;
+
+      const createdByRole = req.user.role;
+
       const [result] = await db.query(
         `
           INSERT INTO media (
             type,
             filename,
             url,
-            size
+            size,
+            created_by_user,
+            created_by_role
           )
-          VALUES (?, ?, ?, ?)
+          VALUES (?, ?, ?, ?, ?, ?)
         `,
-        [fileType, fileName, url, fileSize],
+        [fileType, fileName, url, fileSize, createdByUser, createdByRole],
       );
 
       res.json({

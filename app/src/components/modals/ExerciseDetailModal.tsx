@@ -87,11 +87,13 @@ export default function ExerciseDetailModal({
       <View style={styles.overlay}>
         <TouchableOpacity style={styles.backdrop} onPress={onClose} />
         <View style={[styles.sheet, isCompact ? styles.sheetCompact : null]}>
-          {/* handle + close button */}
-          <View style={styles.handle} />
-          <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-            <Icon name="close" size={22} color={colors.textSecondary} />
-          </TouchableOpacity>
+          <View style={styles.header}>
+            <View style={styles.headerSpacer} />
+            <View style={styles.headerCenter} />
+            <TouchableOpacity style={styles.iconButton} onPress={onClose}>
+              <Icon name="close" size={24} color={colors.textPrimary} />
+            </TouchableOpacity>
+          </View>
 
           <ScrollView
             showsVerticalScrollIndicator={false}
@@ -126,7 +128,9 @@ export default function ExerciseDetailModal({
             {/* name + category + muscle group */}
             <View style={styles.infoSection}>
               <Text style={styles.category}>{getSportName(exercise.sid)}</Text>
-              <Text style={[styles.name, isCompact ? styles.nameCompact : null]}>
+              <Text
+                style={[styles.name, isCompact ? styles.nameCompact : null]}
+              >
                 {exercise.name}
               </Text>
               {/* muscle group api not working
@@ -214,6 +218,7 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 24,
     paddingHorizontal: spacing.screenPaddingHorizontal,
     paddingBottom: spacing.xl,
+    paddingTop: spacing.md,
     maxHeight: "85%",
   },
   sheetCompact: {
@@ -221,18 +226,32 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.lg,
     maxHeight: "90%",
   },
-  handle: {
-    width: 40,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: "#E0E0E0",
-    alignSelf: "center",
-    marginTop: spacing.sm,
-    marginBottom: spacing.sm,
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: spacing.sm,
+    paddingBottom: spacing.md,
   },
-  closeButton: {
-    alignSelf: "flex-end",
-    padding: spacing.xs,
+  headerSpacer: {
+    width: 42,
+    height: 42,
+  },
+  headerCenter: {
+    flex: 1,
+  },
+  iconButton: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: colors.white,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
   },
   content: {
     paddingBottom: spacing.lg,

@@ -285,21 +285,8 @@ export default function WorkoutModal({
           style={styles.sheet}
           behavior={Platform.OS === "ios" ? "padding" : undefined}
         >
-          <View style={styles.handle} />
-
           <SafeAreaView style={styles.container} edges={["bottom"]}>
             <View style={styles.header}>
-              <TouchableOpacity style={styles.iconButton} onPress={handleClose}>
-                <Icon name="close" size={24} color={colors.textPrimary} />
-              </TouchableOpacity>
-
-              <View style={styles.headerCenter}>
-                <Text style={styles.headerTitle}>{planName || "Workout"}</Text>
-                <Text style={styles.headerSubtitle}>
-                  {completedSets}/{totalSets} Sets erledigt
-                </Text>
-              </View>
-
               {!isFinished ? (
                 <View style={styles.timerBadge}>
                   <Icon name="timer" size={16} color={colors.primaryBlue} />
@@ -308,6 +295,17 @@ export default function WorkoutModal({
               ) : (
                 <View style={styles.headerSpacer} />
               )}
+
+              <View style={styles.headerCenter}>
+                <Text style={styles.headerTitle}>{planName || "Workout"}</Text>
+                <Text style={styles.headerSubtitle}>
+                  {completedSets}/{totalSets} Sets erledigt
+                </Text>
+              </View>
+
+              <TouchableOpacity style={styles.iconButton} onPress={handleClose}>
+                <Icon name="close" size={24} color={colors.textPrimary} />
+              </TouchableOpacity>
             </View>
 
             {loading ? (
@@ -455,19 +453,11 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 24,
     height: "80%",
   },
-  handle: {
-    width: 40,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: "#E0E0E0",
-    alignSelf: "center",
-    marginTop: spacing.sm,
-    marginBottom: spacing.sm,
-  },
   container: {
     flex: 1,
     backgroundColor: colors.background,
     paddingHorizontal: spacing.screenPaddingHorizontal,
+    paddingTop: spacing.md,
   },
   header: {
     flexDirection: "row",

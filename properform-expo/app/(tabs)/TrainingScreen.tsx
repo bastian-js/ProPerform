@@ -1,22 +1,22 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
   ActivityIndicator,
   Alert,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons as Icon } from "@expo/vector-icons";
 import { colors } from "@/src/theme/colors";
-import { typography } from "@/src/theme/typography";
 import { spacing } from "@/src/theme/spacing";
+import { typography } from "@/src/theme/typography";
 import api from "@/src/utils/axiosInstance";
 import CreatePlanModal from "@/src/components/modals/CreatePlanModal";
-import WorkoutModal from "@/src/components/modals/WorkoutModal";
 import EditPlanModal from "@/src/components/modals/EditPlanModal";
+import WorkoutModal from "@/src/components/modals/WorkoutModal";
 
 type TrainingPlan = {
   tpid: number;
@@ -26,6 +26,13 @@ type TrainingPlan = {
   difficulty: string;
   duration_weeks: number;
   sessions_per_week: number;
+};
+
+type UserTrainingPlan = {
+  id: number;
+  tpid: number;
+  is_selected: number;
+  status: string;
 };
 
 const getSportIcon = (sport: string) => {
@@ -40,6 +47,7 @@ const getSportIcon = (sport: string) => {
 export default function TrainingScreen() {
   const [activeTab, setActiveTab] = useState("Eigene Pläne");
   const [plans, setPlans] = useState<TrainingPlan[]>([]);
+  const [userPlans, setUserPlans] = useState<UserTrainingPlan[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
@@ -59,6 +67,11 @@ export default function TrainingScreen() {
     setWorkoutVisible(true);
   };
 
+  const getUserPlanForTrainingPlan = useCallback(
+    (tpid: number) => userPlans.find((plan) => plan.tpid === tpid),
+    [userPlans],
+  );
+
   const fetchPlans = useCallback(async () => {
     try {
       setLoading(true);
@@ -77,6 +90,19 @@ export default function TrainingScreen() {
     }
   }, []);
 
+  const fetchUserPlans = useCallback(async () => {
+    try {
+      const response = await api.get("/users/training-plans");
+      setUserPlans(response.data.plans);
+    } catch (err: any) {
+      if (err.response?.status === 404) {
+        setUserPlans([]);
+      } else {
+        Alert.alert("Fehler", "User-Pläne konnten nicht geladen werden.");
+      }
+    }
+  }, []);
+
   const fetchTrainer = useCallback(async () => {
     try {
       await api.get("/users/me/trainer");
@@ -87,6 +113,40 @@ export default function TrainingScreen() {
       }
     }
   }, []);
+
+  const refreshAllPlans = useCallback(async () => {
+    await Promise.all([fetchPlans(), fetchUserPlans()]);
+  }, [fetchPlans, fetchUserPlans]);
+
+  const handleActivatePlan = async (plan: TrainingPlan) => {
+    const userPlan = getUserPlanForTrainingPlan(plan.tpid);
+
+    if (!userPlan) {
+      Alert.alert(
+        "Fehler",
+        "Kein zugewiesener User-Plan für diesen Trainingsplan gefunden.",
+      );
+      return;
+    }
+
+    if (userPlan.is_selected === 1) {
+      Alert.alert("Info", "Plan bereits ausgewählt.");
+      return;
+    }
+
+    try {
+      const response = await api.patch(
+        `/users/training-plans/${userPlan.id}/select`,
+      );
+
+      await fetchUserPlans();
+    } catch (err: any) {
+      Alert.alert(
+        "Fehler",
+        err.response?.data?.message || "Plan konnte nicht aktiviert werden.",
+      );
+    }
+  };
 
   const handleDeletePlan = async (tpid: number) => {
     Alert.alert(
@@ -100,7 +160,7 @@ export default function TrainingScreen() {
           onPress: async () => {
             try {
               await api.delete(`/training-plans/${tpid}`);
-              fetchPlans(); // Liste aktualisieren
+              await refreshAllPlans();
             } catch {
               Alert.alert("Fehler", "Plan konnte nicht gelöscht werden.");
             }
@@ -111,8 +171,21 @@ export default function TrainingScreen() {
   };
 
   const handleMorePress = (plan: TrainingPlan) => {
+    const userPlan = getUserPlanForTrainingPlan(plan.tpid);
+    const isSelected = userPlan?.is_selected === 1;
+
     Alert.alert(plan.name, "Was möchtest du tun?", [
       { text: "Abbrechen", style: "cancel" },
+      {
+        text: isSelected ? "Plan bereits ausgewählt" : "Plan auswählen",
+        onPress: () => {
+          if (isSelected) {
+            Alert.alert("Info", "Plan ist bereits aktiv.");
+            return;
+          }
+          void handleActivatePlan(plan);
+        },
+      },
       {
         text: "Bearbeiten",
         onPress: () => {
@@ -130,8 +203,9 @@ export default function TrainingScreen() {
 
   useEffect(() => {
     fetchPlans();
+    fetchUserPlans();
     fetchTrainer();
-  }, [fetchPlans, fetchTrainer]);
+  }, [fetchPlans, fetchUserPlans, fetchTrainer]);
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
@@ -144,22 +218,22 @@ export default function TrainingScreen() {
       </View>
 
       <View style={styles.categories}>
-        {tabs.map((t) => (
+        {tabs.map((tab) => (
           <TouchableOpacity
-            key={t}
+            key={tab}
             style={[
               styles.categoryChip,
-              activeTab === t && styles.categoryChipActive,
+              activeTab === tab && styles.categoryChipActive,
             ]}
-            onPress={() => setActiveTab(t)}
+            onPress={() => setActiveTab(tab)}
           >
             <Text
               style={[
                 styles.categoryText,
-                activeTab === t && styles.categoryTextActive,
+                activeTab === tab && styles.categoryTextActive,
               ]}
             >
-              {t}
+              {tab}
             </Text>
           </TouchableOpacity>
         ))}
@@ -218,48 +292,56 @@ export default function TrainingScreen() {
               showsVerticalScrollIndicator={false}
               contentContainerStyle={styles.list}
             >
-              {plans.map((plan) => (
-                <TouchableOpacity
-                  key={plan.tpid}
-                  style={styles.planCard}
-                  onPress={() => startWorkout(plan)}
-                  activeOpacity={0.7}
-                >
-                  <View style={styles.leftBlock}>
-                    <View style={styles.planIcon}>
-                      <Icon
-                        name={getSportIcon(plan.sport)}
-                        size={20}
-                        color={colors.primaryBlue}
-                      />
-                    </View>
-                    <Text style={styles.sportText}>{plan.sport}</Text>
-                  </View>
+              {plans.map((plan) => {
+                const userPlan = getUserPlanForTrainingPlan(plan.tpid);
+                const isSelected = userPlan?.is_selected === 1;
 
-                  <View style={styles.planContent}>
-                    <Text style={styles.planName} numberOfLines={1}>
-                      {plan.name}
-                    </Text>
-                    <Text style={styles.planDetailsText}>
-                      {plan.sessions_per_week}x pro Woche
-                    </Text>
-                  </View>
-
+                return (
                   <TouchableOpacity
-                    onPress={(e) => {
-                      e.stopPropagation();
-                      handleMorePress(plan);
-                    }}
-                    style={styles.morevert}
+                    key={plan.tpid}
+                    style={styles.planCard}
+                    onPress={() => startWorkout(plan)}
+                    activeOpacity={0.7}
                   >
-                    <Icon
-                      name="more-vert"
-                      size={24}
-                      color={colors.textSecondary}
-                    />
+                    <View style={styles.leftBlock}>
+                      <View style={styles.planIcon}>
+                        <Icon
+                          name={getSportIcon(plan.sport)}
+                          size={20}
+                          color={colors.primaryBlue}
+                        />
+                      </View>
+                      <Text style={styles.sportText}>{plan.sport}</Text>
+                    </View>
+
+                    <View style={styles.planContent}>
+                      <Text style={styles.planName} numberOfLines={1}>
+                        {plan.name}
+                      </Text>
+                      <Text style={styles.planDetailsText}>
+                        {plan.sessions_per_week}x pro Woche
+                      </Text>
+                    </View>
+
+                    <View style={styles.rightActions}>
+                      {isSelected && <View style={styles.activeDot} />}
+                      <TouchableOpacity
+                        onPress={(e) => {
+                          e.stopPropagation();
+                          handleMorePress(plan);
+                        }}
+                        style={styles.morevert}
+                      >
+                        <Icon
+                          name="more-vert"
+                          size={24}
+                          color={colors.textSecondary}
+                        />
+                      </TouchableOpacity>
+                    </View>
                   </TouchableOpacity>
-                </TouchableOpacity>
-              ))}
+                );
+              })}
             </ScrollView>
           )}
         </>
@@ -268,14 +350,14 @@ export default function TrainingScreen() {
       <CreatePlanModal
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
-        onPlanCreated={fetchPlans}
+        onPlanCreated={refreshAllPlans}
       />
 
       <EditPlanModal
         visible={editVisible}
         plan={editPlan}
         onClose={() => setEditVisible(false)}
-        onPlanUpdated={fetchPlans}
+        onPlanUpdated={refreshAllPlans}
       />
 
       <WorkoutModal
@@ -440,6 +522,17 @@ const styles = StyleSheet.create({
     ...typography.body,
     fontSize: 13,
     color: colors.textSecondary,
+  },
+  rightActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+  },
+  activeDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 999,
+    backgroundColor: "#22C55E",
   },
   morevert: {
     marginLeft: spacing.xs,

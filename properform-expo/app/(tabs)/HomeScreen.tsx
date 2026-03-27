@@ -12,6 +12,7 @@ import { typography } from "@/src/theme/typography";
 import { spacing } from "@/src/theme/spacing";
 import { colors } from "@/src/theme/colors";
 import SecondaryButton from "@/src/components/secondaryButton";
+import WorkoutModal from "@/src/components/modals/WorkoutModal";
 import api from "@/src/utils/axiosInstance";
 import { useFocusEffect } from "expo-router";
 import { MaterialIcons as Icon } from "@expo/vector-icons";
@@ -61,6 +62,27 @@ type LastWorkout = {
   date: string;
 };
 
+type SelectedTrainingPlan = {
+  id: number;
+  uid: number;
+  tpid: number;
+  assigned_by_trainer: number | null;
+  start_date: string;
+  end_date: string | null;
+  completion_percentage: number | string;
+  status: string;
+  is_selected: number;
+  created_at: string;
+  updated_at: string;
+  training_plan: {
+    tpid: number;
+    name: string;
+    description: string;
+    duration_weeks: number;
+    sessions_per_week: number;
+  };
+};
+
 export default function HomeScreen() {
   const [user, setUser] = useState<{
     firstname: string;
@@ -71,6 +93,11 @@ export default function HomeScreen() {
   const [streakDays, setStreakDays] = useState(0);
   const [completed, setCompleted] = useState<boolean[]>(Array(7).fill(false));
   const [lastWorkout, setLastWorkout] = useState<LastWorkout | null>(null);
+  const [selectedTrainingPlan, setSelectedTrainingPlan] =
+    useState<SelectedTrainingPlan | null>(null);
+  const [selectedTrainingLoading, setSelectedTrainingLoading] = useState(true);
+  const [selectedTrainingMissing, setSelectedTrainingMissing] = useState(false);
+  const [workoutVisible, setWorkoutVisible] = useState(false);
 
   useEffect(() => {
     const getUserData = async () => {
@@ -144,13 +171,38 @@ export default function HomeScreen() {
     setLastWorkout(JSON.parse(storedWorkout));
   }, []);
 
+  const loadSelectedTrainingPlan = useCallback(async () => {
+    try {
+      setSelectedTrainingLoading(true);
+      const response = await api.get("/users/training-plans/selected");
+      setSelectedTrainingPlan(response.data.plan);
+      setSelectedTrainingMissing(false);
+    } catch (err: any) {
+      if (err.response?.status === 404) {
+        setSelectedTrainingPlan(null);
+        setSelectedTrainingMissing(true);
+      } else {
+        console.log(
+          "Fehler beim Laden des aktiven Trainingsplans:",
+          err.response?.data || err.message,
+        );
+        setSelectedTrainingPlan(null);
+        setSelectedTrainingMissing(true);
+      }
+    } finally {
+      setSelectedTrainingLoading(false);
+    }
+  }, []);
+
   useFocusEffect(
     useCallback(() => {
       setGreeting(calculateGreeting());
       void loadAndUpdateStreak();
       void loadLastWorkout();
-    }, [loadAndUpdateStreak, loadLastWorkout]),
+      void loadSelectedTrainingPlan();
+    }, [loadAndUpdateStreak, loadLastWorkout, loadSelectedTrainingPlan]),
   );
+
   const days = ["M", "D", "M", "D", "F", "S", "S"];
 
   if (loading) {
@@ -170,7 +222,6 @@ export default function HomeScreen() {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        {/* top row (profile, greeting, name) */}
         <View style={styles.topRow}>
           <View style={styles.avatarIconWrap}>
             <Icon name="person" size={28} color={colors.primaryBlue} />
@@ -256,28 +307,85 @@ export default function HomeScreen() {
           )}
         </View>
 
-        {/* heutiges vorgeschlagenes training dummy */}
         <View style={styles.trainingCard}>
-          {/* Deko Kreise */}
           <View style={styles.decoCircle1} />
           <View style={styles.decoCircle2} />
 
           <View style={styles.trainingTop}>
             <Text style={styles.trainingLabel}>HEUTIGES TRAINING</Text>
 
-            <View style={styles.durationBadge}>
-              <Text style={styles.durationIcon}>🕒</Text>
-              <Text style={styles.durationText}>45 min.</Text>
-            </View>
+            {selectedTrainingLoading ? (
+              <View style={styles.durationBadge}>
+                <ActivityIndicator size="small" color={colors.white} />
+              </View>
+            ) : selectedTrainingPlan ? (
+              <View style={styles.durationBadge}>
+                <Text style={styles.durationIcon}>🗓</Text>
+                <Text style={styles.durationText}>
+                  {selectedTrainingPlan.training_plan.sessions_per_week}x pro
+                  Woche
+                </Text>
+              </View>
+            ) : null}
           </View>
 
-          <Text style={styles.trainingMain}>Brust & Trizeps</Text>
+          {selectedTrainingLoading ? (
+            <>
+              <Text style={styles.trainingMain}>Lade Trainingsplan...</Text>
+              <View style={styles.trainingButtonWrap}>
+                <SecondaryButton text="TRAINING STARTEN" />
+              </View>
+            </>
+          ) : selectedTrainingPlan ? (
+            <>
+              <Text style={styles.trainingMain}>
+                {selectedTrainingPlan.training_plan.name}
+              </Text>
+              <Text style={styles.trainingSubtext}>
+                {selectedTrainingPlan.training_plan.description ||
+                  `${selectedTrainingPlan.training_plan.sessions_per_week}x pro Woche`}
+              </Text>
 
-          <View style={styles.trainingButtonWrap}>
-            <SecondaryButton text="TRAINING STARTEN" />
-          </View>
+              <View style={styles.trainingButtonWrap}>
+                <SecondaryButton
+                  text="TRAINING STARTEN"
+                  onPress={() => {
+                    setWorkoutVisible(true);
+                  }}
+                />
+              </View>
+            </>
+          ) : (
+            <>
+              <Text style={styles.trainingMain}>
+                Noch keinen Trainingsplan ausgewählt
+              </Text>
+              <Text style={styles.trainingSubtext}>
+                Wähle im Bereich Trainingspläne einen aktiven Plan aus.
+              </Text>
+
+              <View style={styles.trainingButtonWrap}>
+                <View style={styles.disabledButtonWrap}>
+                  <SecondaryButton
+                    text={
+                      selectedTrainingMissing
+                        ? "KEIN PLAN AUSGEWÄHLT"
+                        : "TRAININGSPLAN AUSWÄHLEN"
+                    }
+                  />
+                </View>
+              </View>
+            </>
+          )}
         </View>
       </ScrollView>
+
+      <WorkoutModal
+        visible={workoutVisible}
+        planId={selectedTrainingPlan?.training_plan.tpid ?? null}
+        planName={selectedTrainingPlan?.training_plan.name ?? ""}
+        onClose={() => setWorkoutVisible(false)}
+      />
     </SafeAreaView>
   );
 }
@@ -292,20 +400,16 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-
   scrollContent: {
     paddingHorizontal: spacing.screenPaddingHorizontal,
     paddingTop: spacing.screenPaddingTop,
     paddingBottom: spacing.xl,
   },
-
-  // top row (profile, greeting, name)
   topRow: {
     flexDirection: "row",
     alignItems: "center",
     marginBottom: spacing.lg,
   },
-
   avatarIconWrap: {
     width: 48,
     height: 48,
@@ -315,18 +419,15 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginRight: spacing.md,
   },
-
   greetingBlock: {
     flex: 1,
   },
-
   goodMorning: {
     ...typography.secondary,
     textAlign: "left",
     fontSize: 14,
     color: colors.textSecondary,
   },
-
   hello: {
     ...typography.greeting,
     textAlign: "left",
@@ -334,8 +435,6 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     color: colors.textPrimary,
   },
-
-  // streak card
   card: {
     backgroundColor: colors.white,
     borderRadius: 24,
@@ -346,14 +445,11 @@ const styles = StyleSheet.create({
     shadowRadius: 14,
     elevation: 3,
   },
-
-  // streak
   streakHeader: {
     flexDirection: "row",
     alignItems: "center",
     marginBottom: spacing.md,
   },
-
   streakTitle: {
     fontFamily: "Inter",
     fontSize: 18,
@@ -361,49 +457,40 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     flex: 1,
   },
-
   streakRight: {
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.xs,
   },
-
   fire: {
     fontSize: 16,
   },
-
   streakActive: {
     fontFamily: "Inter",
     fontSize: 14,
     fontWeight: "700",
     color: colors.accentOrange,
   },
-
   streakSquaresRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     marginBottom: spacing.sm,
   },
-
   streakSquare: {
     width: 38,
     height: 38,
     borderRadius: 8,
   },
-
   streakSquareOn: {
     backgroundColor: colors.primaryBlue,
   },
-
   streakSquareOff: {
     backgroundColor: "#D1D5DB59",
   },
-
   streakDaysRow: {
     flexDirection: "row",
     justifyContent: "space-between",
   },
-
   streakDayLabel: {
     fontFamily: "Inter",
     fontSize: 12,
@@ -412,7 +499,6 @@ const styles = StyleSheet.create({
     width: 38,
     textAlign: "center",
   },
-
   lastWorkoutHeader: {
     flexDirection: "row",
     alignItems: "center",
@@ -420,7 +506,6 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
     gap: spacing.sm,
   },
-
   lastWorkoutTitle: {
     fontFamily: "Inter",
     fontSize: 18,
@@ -428,21 +513,18 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     flex: 1,
   },
-
   lastWorkoutBadge: {
     backgroundColor: "#EEF4FF",
     borderRadius: 999,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
   },
-
   lastWorkoutBadgeText: {
     fontFamily: "Inter",
     fontSize: 12,
     fontWeight: "700",
     color: colors.primaryBlue,
   },
-
   lastWorkoutName: {
     fontFamily: "Inter",
     fontSize: 24,
@@ -450,12 +532,10 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     marginBottom: spacing.md,
   },
-
   lastWorkoutInfoRow: {
     flexDirection: "row",
     gap: spacing.sm,
   },
-
   lastWorkoutInfoCard: {
     flex: 1,
     backgroundColor: colors.background,
@@ -463,7 +543,6 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.md,
   },
-
   lastWorkoutInfoLabel: {
     fontFamily: "Inter",
     fontSize: 12,
@@ -472,32 +551,27 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
     letterSpacing: 0.5,
   },
-
   lastWorkoutInfoValue: {
     fontFamily: "Inter",
     fontSize: 15,
     fontWeight: "700",
     color: colors.textPrimary,
   },
-
   lastWorkoutEmptyText: {
     fontFamily: "Inter",
     fontSize: 14,
     color: colors.textSecondary,
   },
-
-  // training card
   trainingCard: {
     backgroundColor: colors.primaryBlue,
-    borderRadius: 28,
-    padding: spacing.xl,
+    borderRadius: 24,
+    padding: spacing.md,
     shadowColor: "#000",
     shadowOpacity: 0.08,
     shadowRadius: 16,
     elevation: 4,
     overflow: "hidden",
   },
-
   decoCircle1: {
     position: "absolute",
     width: 220,
@@ -507,7 +581,6 @@ const styles = StyleSheet.create({
     top: -60,
     backgroundColor: "#FFFFFF14",
   },
-
   decoCircle2: {
     position: "absolute",
     width: 140,
@@ -517,14 +590,12 @@ const styles = StyleSheet.create({
     bottom: -60,
     backgroundColor: "#FFFFFF0F",
   },
-
   trainingTop: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     marginBottom: spacing.md,
   },
-
   trainingLabel: {
     fontFamily: "Inter",
     fontSize: 14,
@@ -532,7 +603,6 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
     color: "#FFFFFFB3",
   },
-
   durationBadge: {
     flexDirection: "row",
     alignItems: "center",
@@ -541,19 +611,17 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     borderRadius: 999,
     backgroundColor: "#FFFFFF29",
+    minHeight: 38,
   },
-
   durationIcon: {
     fontSize: 14,
   },
-
   durationText: {
     fontFamily: "Inter",
     fontSize: 14,
     fontWeight: "700",
     color: colors.white,
   },
-
   trainingMain: {
     fontFamily: "Inter",
     fontSize: 28,
@@ -561,8 +629,18 @@ const styles = StyleSheet.create({
     color: colors.white,
     marginBottom: spacing.md,
   },
-
+  trainingSubtext: {
+    fontFamily: "Inter",
+    fontSize: 14,
+    color: "#FFFFFFCC",
+    marginTop: -spacing.xs,
+    marginBottom: spacing.md,
+    lineHeight: 20,
+  },
   trainingButtonWrap: {
     marginTop: -spacing.xs,
+  },
+  disabledButtonWrap: {
+    opacity: 0.6,
   },
 });

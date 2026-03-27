@@ -2,8 +2,8 @@ import { colors } from "@/src/theme/colors";
 import { spacing } from "@/src/theme/spacing";
 import api from "@/src/utils/axiosInstance";
 import { MaterialIcons as Icon } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
-import React, { useEffect } from "react";
+import { useFocusEffect, useRouter } from "expo-router";
+import React from "react";
 import {
   ActivityIndicator,
   ScrollView,
@@ -25,19 +25,24 @@ export default function ProfileScreen() {
   } | null>(null);
   const [loading, setLoading] = React.useState(true);
 
-  useEffect(() => {
-    const getUser = async () => {
-      try {
-        const response = await api.get("/users/me");
-        setUser(response.data);
-      } catch (err) {
-        console.log("Fehler beim Laden des Profils:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    getUser();
-  }, []);
+  useFocusEffect(
+    React.useCallback(() => {
+      const getUser = async () => {
+        setLoading(true);
+
+        try {
+          const response = await api.get("/users/me");
+          setUser(response.data);
+        } catch (err) {
+          console.log("Fehler beim Laden des Profils:", err);
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      void getUser();
+    }, []),
+  );
 
   if (loading) {
     return (
@@ -130,50 +135,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  content: {
-    flex: 1,
-    paddingHorizontal: spacing.screenPaddingHorizontal,
-    paddingTop: spacing.screenPaddingTop,
-  },
-  containerImage: {
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 20,
-  },
-  infoCard: {
-    marginTop: 30,
-    padding: 20,
-    borderWidth: 2,
-    borderColor: "#A0A0A0",
-    borderRadius: 15,
-    backgroundColor: "#fff",
-  },
-  infoCardTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    marginBottom: 10,
-  },
-  infoCardLabel: {
-    fontSize: 14,
-    fontWeight: "500",
-  },
-  seperator: {
-    height: 1,
-    backgroundColor: "#A0A0A0",
-    marginVertical: 20,
-    width: "100%",
-  },
-  buttonText: {
-    color: "#fff",
-    fontSize: 18,
-    fontWeight: "bold",
-  },
   topSection: {
     flexDirection: "row",
     alignItems: "center",
     marginBottom: spacing.xl,
   },
-
   profileIconWrap: {
     width: 90,
     height: 90,
@@ -191,18 +157,10 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     fontFamily: "Inter",
   },
-
   hello: {
     fontSize: 28,
     fontWeight: "900",
     color: colors.textPrimary,
-    fontFamily: "Inter",
-  },
-
-  subline: {
-    marginTop: spacing.xs,
-    fontSize: 16,
-    color: colors.borderGray,
     fontFamily: "Inter",
   },
   infoSection: {
@@ -215,7 +173,6 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 3,
   },
-
   sectionTitle: {
     fontSize: 14,
     fontWeight: "800",
@@ -224,32 +181,27 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
     fontFamily: "Inter",
   },
-
   row: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     paddingVertical: spacing.md,
   },
-
   label: {
     fontSize: 18,
     color: colors.textSecondary,
     fontFamily: "Inter",
   },
-
   value: {
     fontSize: 18,
     fontWeight: "700",
     color: colors.textPrimary,
     fontFamily: "Inter",
   },
-
   separator: {
     height: 1,
     backgroundColor: "#E5E7EB",
   },
-
   copyRightText: {
     textAlign: "center",
     fontSize: 14,

@@ -44,172 +44,6 @@ router.post("/register", async (req, res) => {
     invite_code,
   } = req.body;
 
-<<<<<<< HEAD
-    if (
-      !firstname ||
-      !birthdate ||
-      !email ||
-      !password ||
-      weight == null ||
-      height == null ||
-      !gender ||
-      onboarding_completed === undefined ||
-      !fitness_level ||
-      training_frequency == null ||
-      !primary_goal
-    ) {
-      return res.status(400).json({
-        error: "please fill all required fields.",
-      });
-    }
-
-    const normalizedEmail = email.trim().toLowerCase();
-
-	const passwordRegex =
-/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#_.-])[A-Za-z\d@$!%*?&#_.-]{8,}$/;
-
-    if (!passwordRegex.test(password)) {
-      return res.status(400).json({
-        error: "password must be at least 8 characters long and contain uppercase, lowercase, number, and special character.",
-      });
-    }
-
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-    if (!emailRegex.test(normalizedEmail)) {
-      return res.status(400).json({
-        error: "invalid email address.",
-      });
-    }
-
-    const connection = await db.getConnection();
-
-    try {
-      await connection.beginTransaction();
-
-      const role_id = 2;
-      const hashedPassword = await bcrypt.hash(password, saltRounds);
-
-      const rawCode = String(crypto.randomInt(100000, 1000000));
-      const codeHash = crypto
-        .createHash("sha256")
-        .update(rawCode)
-        .digest("hex");
-      const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
-
-      const [result] = await connection.execute(
-        `INSERT INTO users 
-        (firstname, birthdate, email, password_hash, weight, height, gender, onboarding_completed, fitness_level, training_frequency, primary_goal, role_id, email_verification_code, email_verification_expires, email_verified) 
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [
-          firstname,
-          birthdate,
-          normalizedEmail,
-          hashedPassword,
-          weight,
-          height,
-          gender,
-          onboarding_completed,
-          fitness_level,
-          training_frequency,
-          primary_goal,
-          role_id,
-          codeHash,
-          expiresAt,
-          email_verified,
-        ],
-      );
-
-      const newUserId = result.insertId;
-
-      if (invite_code?.trim()) {
-        const [trainerRows] = await connection.execute(
-          "SELECT tid FROM trainers WHERE invite_code = ?",
-          [invite_code.trim()],
-        );
-
-        if (trainerRows.length === 0) {
-          await connection.rollback();
-          return res.status(400).json({
-            error: "invalid invite code.",
-          });
-        }
-
-        const trainerId = trainerRows[0].tid;
-
-        await connection.execute(
-          "INSERT INTO trainer_athletes (tid, uid, assigned_date) VALUES (?, ?, CURDATE())",
-          [trainerId, newUserId],
-        );
-      }
-
-      await connection.commit();
-      connection.release();
-
-      const accessToken = jwt.sign(
-        { uid: newUserId, role: "user" },
-        process.env.JWT_SECRET,
-        { expiresIn: "15m" },
-      );
-
-      const refreshToken = jwt.sign(
-        { uid: newUserId, type: "refresh" },
-        process.env.JWT_REFRESH_SECRET,
-        { expiresIn: stayLoggedIn ? "60d" : "3d" },
-      );
-
-      await db.query(
-        `
-        INSERT INTO refresh_tokens (uid, token, expires_at)
-        VALUES (?, ?, DATE_ADD(NOW(), INTERVAL ? DAY))
-        `,
-        [newUserId, refreshToken, stayLoggedIn ? 60 : 3],
-      );
-
-      const { subject, text, html } = buildVerificationEmail(
-        firstname,
-        rawCode,
-      );
-
-      mailer
-        .sendMail({
-          from: '"ProPerform" <no-reply@properform.app>',
-          to: normalizedEmail,
-          subject,
-          text,
-          html,
-        })
-        .catch(console.error);
-
-      return res.status(201).json({
-        message: "user successfully created.",
-        access_token: accessToken,
-        refresh_token: refreshToken,
-        uid: newUserId,
-      });
-    } catch (error) {
-      await connection.rollback();
-      connection.release();
-
-      if (error.code === "ER_DUP_ENTRY") {
-        return res.status(409).json({
-          error: "email already registered.",
-        });
-      }
-
-      return res.status(500).json({
-        message: "registration failed.",
-        error: error.message,
-      });
-    }
-  },
-);
-
-router.post("/login", async (req, res) => {
-  let { email, password, stayLoggedIn } = req.body;
-
-  if (!email || !password) {
-=======
   if (
     !firstname ||
     !birthdate ||
@@ -223,7 +57,151 @@ router.post("/login", async (req, res) => {
     training_frequency == null ||
     !primary_goal
   ) {
->>>>>>> main
+    return res.status(400).json({
+      error: "please fill all required fields.",
+    });
+  }
+
+  const normalizedEmail = email.trim().toLowerCase();
+
+  const passwordRegex =
+    /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#_.-])[A-Za-z\d@$!%*?&#_.-]{8,}$/;
+
+  if (!passwordRegex.test(password)) {
+    return res.status(400).json({
+      error:
+        "password must be at least 8 characters long and contain uppercase, lowercase, number, and special character.",
+    });
+  }
+
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+  if (!emailRegex.test(normalizedEmail)) {
+    return res.status(400).json({
+      error: "invalid email address.",
+    });
+  }
+
+  const connection = await db.getConnection();
+
+  try {
+    await connection.beginTransaction();
+
+    const role_id = 2;
+    const hashedPassword = await bcrypt.hash(password, saltRounds);
+
+    const rawCode = String(crypto.randomInt(100000, 1000000));
+    const codeHash = crypto.createHash("sha256").update(rawCode).digest("hex");
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
+
+    const [result] = await connection.execute(
+      `INSERT INTO users 
+        (firstname, birthdate, email, password_hash, weight, height, gender, onboarding_completed, fitness_level, training_frequency, primary_goal, role_id, email_verification_code, email_verification_expires, email_verified) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        firstname,
+        birthdate,
+        normalizedEmail,
+        hashedPassword,
+        weight,
+        height,
+        gender,
+        onboarding_completed,
+        fitness_level,
+        training_frequency,
+        primary_goal,
+        role_id,
+        codeHash,
+        expiresAt,
+        email_verified,
+      ],
+    );
+
+    const newUserId = result.insertId;
+
+    if (invite_code?.trim()) {
+      const [trainerRows] = await connection.execute(
+        "SELECT tid FROM trainers WHERE invite_code = ?",
+        [invite_code.trim()],
+      );
+
+      if (trainerRows.length === 0) {
+        await connection.rollback();
+        return res.status(400).json({
+          error: "invalid invite code.",
+        });
+      }
+
+      const trainerId = trainerRows[0].tid;
+
+      await connection.execute(
+        "INSERT INTO trainer_athletes (tid, uid, assigned_date) VALUES (?, ?, CURDATE())",
+        [trainerId, newUserId],
+      );
+    }
+
+    await connection.commit();
+    connection.release();
+
+    const accessToken = jwt.sign(
+      { uid: newUserId, role: "user" },
+      process.env.JWT_SECRET,
+      { expiresIn: "15m" },
+    );
+
+    const refreshToken = jwt.sign(
+      { uid: newUserId, type: "refresh" },
+      process.env.JWT_REFRESH_SECRET,
+      { expiresIn: stayLoggedIn ? "60d" : "3d" },
+    );
+
+    await db.query(
+      `
+        INSERT INTO refresh_tokens (uid, token, expires_at)
+        VALUES (?, ?, DATE_ADD(NOW(), INTERVAL ? DAY))
+        `,
+      [newUserId, refreshToken, stayLoggedIn ? 60 : 3],
+    );
+
+    const { subject, text, html } = buildVerificationEmail(firstname, rawCode);
+
+    mailer
+      .sendMail({
+        from: '"ProPerform" <no-reply@properform.app>',
+        to: normalizedEmail,
+        subject,
+        text,
+        html,
+      })
+      .catch(console.error);
+
+    return res.status(201).json({
+      message: "user successfully created.",
+      access_token: accessToken,
+      refresh_token: refreshToken,
+      uid: newUserId,
+    });
+  } catch (error) {
+    await connection.rollback();
+    connection.release();
+
+    if (error.code === "ER_DUP_ENTRY") {
+      return res.status(409).json({
+        error: "email already registered.",
+      });
+    }
+
+    return res.status(500).json({
+      message: "registration failed.",
+      error: error.message,
+    });
+  }
+});
+
+router.post("/login", async (req, res) => {
+  let { email, password, stayLoggedIn } = req.body;
+
+  if (!email || !password) {
     return res.status(400).json({
       error: "please fill all required fields.",
     });

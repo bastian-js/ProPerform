@@ -346,10 +346,7 @@ export default function HomeScreen() {
           ) : (
             <>
               <Text style={styles.trainingMain}>
-                Noch keinen Trainingsplan ausgewählt
-              </Text>
-              <Text style={styles.trainingSubtext}>
-                Wähle im Bereich Trainingspläne einen aktiven Plan aus.
+                Keinen Trainingsplan ausgewählt
               </Text>
 
               <View style={styles.trainingButtonWrap}>
@@ -357,7 +354,7 @@ export default function HomeScreen() {
                   <SecondaryButton
                     text={
                       selectedTrainingMissing
-                        ? "KEIN PLAN AUSGEWÄHLT"
+                        ? "NICHT AUSGEWÄHLT"
                         : "TRAININGSPLAN AUSWÄHLEN"
                     }
                   />
@@ -430,8 +427,8 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.white,
     borderRadius: 24,
-    padding: spacing.lg,
-    marginBottom: spacing.xl,
+    padding: spacing.md,
+    marginBottom: spacing.md,
     shadowColor: "#000",
     shadowOpacity: 0.06,
     shadowRadius: 14,
@@ -625,14 +622,14 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: "900",
     color: colors.white,
-    marginBottom: spacing.md,
+    marginBottom: spacing.sm,
   },
   trainingSubtext: {
     fontFamily: "Inter",
     fontSize: 14,
     color: "#FFFFFFCC",
     marginTop: -spacing.xs,
-    marginBottom: spacing.md,
+    marginBottom: spacing.sm,
     lineHeight: 20,
   },
   trainingButtonWrap: {

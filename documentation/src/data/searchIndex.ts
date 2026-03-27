@@ -124,6 +124,20 @@ export const searchIndex: SearchIndexItem[] = [
     content: "Delete user by ID, remove user account, delete user uid",
   },
   {
+    to: "/api/streak/update",
+    label: "POST /streak/update",
+    category: "API Reference -> Users",
+    content:
+      "Update user streak, create daily streak log, streak update by type, current streak, longest streak, habit tracking",
+  },
+  {
+    to: "/api/streak/:type",
+    label: "POST /streak/:type",
+    category: "API Reference -> Users",
+    content:
+      "Get streak by type, current streak value, longest streak value, last activity date, streak status for user",
+  },
+  {
     to: "/api/logs/weight",
     label: "POST /logs/weight",
     category: "API Reference → Weight Logs",

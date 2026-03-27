@@ -236,16 +236,37 @@ export default function WorkoutModal({
   );
 
   const finishWorkout = async () => {
-    await AsyncStorage.setItem(
-      "last_workout",
-      JSON.stringify({
-        name: planName || "Workout",
-        duration: seconds,
-        date: new Date().toISOString(),
-      }),
-    );
-    stopTimer();
-    setIsFinished(true);
+    try {
+      await AsyncStorage.setItem(
+        "last_workout",
+        JSON.stringify({
+          name: planName || "Workout",
+          duration: seconds,
+          date: new Date().toISOString(),
+        }),
+      );
+
+      const streakResponse = await api.post("/users/streaks/update", {
+        type: "training",
+      });
+
+      console.log("Streak update response", streakResponse.data);
+    } catch (err: any) {
+      console.log(
+        "Streak update error",
+        err.response?.status,
+        err.response?.data,
+        err.message,
+      );
+      Alert.alert(
+        "Hinweis",
+        err.response?.data?.message ||
+          "Streak konnte nicht aktualisiert werden.",
+      );
+    } finally {
+      stopTimer();
+      setIsFinished(true);
+    }
   };
 
   return (

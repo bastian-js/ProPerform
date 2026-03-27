@@ -5,6 +5,7 @@ import {
   StyleSheet,
   ScrollView,
   ActivityIndicator,
+  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -16,31 +17,6 @@ import WorkoutModal from "@/src/components/modals/WorkoutModal";
 import api from "@/src/utils/axiosInstance";
 import { useFocusEffect } from "expo-router";
 import { MaterialIcons as Icon } from "@expo/vector-icons";
-
-const getTodayString = () => new Date().toISOString().split("T")[0];
-
-const getYesterdayString = () => {
-  const d = new Date();
-  d.setDate(d.getDate() - 1);
-  return d.toISOString().split("T")[0];
-};
-
-const getCurrentWeekDates = () => {
-  const today = new Date();
-  const day = today.getDay();
-  const monday = new Date(today);
-  monday.setDate(today.getDate() - (day === 0 ? 6 : day - 1));
-
-  const dates: string[] = [];
-
-  for (let i = 0; i < 7; i++) {
-    const d = new Date(monday);
-    d.setDate(monday.getDate() + i);
-    dates.push(d.toISOString().split("T")[0]);
-  }
-
-  return dates;
-};
 
 const getStreakLabel = (days: number) =>
   `${days} ${days === 1 ? "Tag" : "Tage"} aktiv`;
@@ -91,6 +67,9 @@ export default function HomeScreen() {
   const [loading, setLoading] = useState(true);
   const [greeting, setGreeting] = useState("");
   const [streakDays, setStreakDays] = useState(0);
+  const [streakLoading, setStreakLoading] = useState(true);
+  const [longestStreak, setLongestStreak] = useState(0);
+  const [lastActivityDate, setLastActivityDate] = useState<string | null>(null);
   const [completed, setCompleted] = useState<boolean[]>(Array(7).fill(false));
   const [lastWorkout, setLastWorkout] = useState<LastWorkout | null>(null);
   const [selectedTrainingPlan, setSelectedTrainingPlan] =
@@ -121,43 +100,43 @@ export default function HomeScreen() {
     return "Guten Abend,";
   };
 
-  const loadAndUpdateStreak = useCallback(async () => {
-    const today = getTodayString();
+  const loadTrainingStreak = useCallback(async () => {
+    try {
+      setStreakLoading(true);
 
-    const lastVisit = await AsyncStorage.getItem("home_streak_last_visit");
-    const storedStreak = await AsyncStorage.getItem("home_streak_current");
-    const storedWeekVisits = await AsyncStorage.getItem(
-      "home_streak_week_visits",
-    );
+      const response = await api.post("/users/streaks/training");
+      const currentStreak = response.data.current_streak ?? 0;
+      const longest = response.data.longest_streak ?? 0;
+      const lastActivity = response.data.last_activity_date ?? null;
 
-    let current = storedStreak ? parseInt(storedStreak, 10) : 0;
-    let weekVisits: string[] = storedWeekVisits
-      ? JSON.parse(storedWeekVisits)
-      : [];
+      setStreakDays(currentStreak);
+      setLongestStreak(longest);
+      setLastActivityDate(lastActivity);
 
-    if (lastVisit === today) {
-    } else if (lastVisit === getYesterdayString()) {
-      current += 1;
-    } else {
-      current = 1;
+      let visibleCount = currentStreak % 7;
+
+      if (currentStreak > 0 && visibleCount === 0) {
+        visibleCount = 7;
+      }
+
+      const nextCompleted = lastActivity
+        ? Array.from({ length: 7 }, (_, index) => index < visibleCount)
+        : Array(7).fill(false);
+
+      setCompleted(nextCompleted);
+    } catch (err: any) {
+      Alert.alert(
+        "Fehler",
+        err.response?.data?.message ||
+          "Training-Streak konnte nicht geladen werden.",
+      );
+      setStreakDays(0);
+      setLongestStreak(0);
+      setLastActivityDate(null);
+      setCompleted(Array(7).fill(false));
+    } finally {
+      setStreakLoading(false);
     }
-
-    if (!weekVisits.includes(today)) {
-      weekVisits = [...weekVisits, today];
-    }
-
-    const weekDates = getCurrentWeekDates();
-    weekVisits = weekVisits.filter((d) => weekDates.includes(d));
-
-    await AsyncStorage.setItem("home_streak_last_visit", today);
-    await AsyncStorage.setItem("home_streak_current", String(current));
-    await AsyncStorage.setItem(
-      "home_streak_week_visits",
-      JSON.stringify(weekVisits),
-    );
-
-    setStreakDays(current);
-    setCompleted(weekDates.map((d) => weekVisits.includes(d)));
   }, []);
 
   const loadLastWorkout = useCallback(async () => {
@@ -197,10 +176,10 @@ export default function HomeScreen() {
   useFocusEffect(
     useCallback(() => {
       setGreeting(calculateGreeting());
-      void loadAndUpdateStreak();
+      void loadTrainingStreak();
       void loadLastWorkout();
       void loadSelectedTrainingPlan();
-    }, [loadAndUpdateStreak, loadLastWorkout, loadSelectedTrainingPlan]),
+    }, [loadTrainingStreak, loadLastWorkout, loadSelectedTrainingPlan]),
   );
 
   const days = ["M", "D", "M", "D", "F", "S", "S"];
@@ -235,15 +214,24 @@ export default function HomeScreen() {
 
         <View style={styles.card}>
           <View style={styles.streakHeader}>
-            <Text style={styles.streakTitle}>Besuch-Streak</Text>
+            <Text style={styles.streakTitle}>Trainings-Streak</Text>
 
             <View style={styles.streakRight}>
               <Text style={styles.fire}>🔥</Text>
               <Text style={styles.streakActive}>
-                {getStreakLabel(streakDays)}
+                {streakLoading
+                  ? "Lädt..."
+                  : `${getStreakLabel(streakDays)} · Bestwert ${longestStreak}`}
               </Text>
             </View>
           </View>
+
+          {lastActivityDate ? (
+            <Text style={styles.streakSubtext}>
+              Letzte Aktivität:{" "}
+              {new Date(lastActivityDate).toLocaleDateString("de-AT")}
+            </Text>
+          ) : null}
 
           <View style={styles.streakSquaresRow}>
             {completed.map((isOn, dayIndex) => (
@@ -384,7 +372,11 @@ export default function HomeScreen() {
         visible={workoutVisible}
         planId={selectedTrainingPlan?.training_plan.tpid ?? null}
         planName={selectedTrainingPlan?.training_plan.name ?? ""}
-        onClose={() => setWorkoutVisible(false)}
+        onClose={() => {
+          setWorkoutVisible(false);
+          void loadLastWorkout();
+          void loadTrainingStreak();
+        }}
       />
     </SafeAreaView>
   );
@@ -470,6 +462,12 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "700",
     color: colors.accentOrange,
+  },
+  streakSubtext: {
+    fontFamily: "Inter",
+    fontSize: 12,
+    color: colors.textSecondary,
+    marginBottom: spacing.sm,
   },
   streakSquaresRow: {
     flexDirection: "row",

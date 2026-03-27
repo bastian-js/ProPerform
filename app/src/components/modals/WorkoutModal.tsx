@@ -287,14 +287,16 @@ export default function WorkoutModal({
         >
           <SafeAreaView style={styles.container} edges={["bottom"]}>
             <View style={styles.header}>
-              {!isFinished ? (
-                <View style={styles.timerBadge}>
-                  <Icon name="timer" size={16} color={colors.primaryBlue} />
-                  <Text style={styles.timerText}>{formatTime(seconds)}</Text>
-                </View>
-              ) : (
-                <View style={styles.headerSpacer} />
-              )}
+              <View style={styles.headerSide}>
+                {!isFinished ? (
+                  <View style={styles.timerBadge}>
+                    <Icon name="timer" size={16} color={colors.primaryBlue} />
+                    <Text style={styles.timerText}>{formatTime(seconds)}</Text>
+                  </View>
+                ) : (
+                  <View style={styles.headerSpacer} />
+                )}
+              </View>
 
               <View style={styles.headerCenter}>
                 <Text style={styles.headerTitle}>{planName || "Workout"}</Text>
@@ -303,9 +305,11 @@ export default function WorkoutModal({
                 </Text>
               </View>
 
-              <TouchableOpacity style={styles.iconButton} onPress={handleClose}>
-                <Icon name="close" size={24} color={colors.textPrimary} />
-              </TouchableOpacity>
+              <View style={[styles.headerSide, styles.headerSideRight]}>
+                <TouchableOpacity style={styles.iconButton} onPress={handleClose}>
+                  <Icon name="close" size={24} color={colors.textPrimary} />
+                </TouchableOpacity>
+              </View>
             </View>
 
             {loading ? (
@@ -368,7 +372,7 @@ export default function WorkoutModal({
                           />
 
                           <TouchableOpacity
-                            style={styles.smallIconButton}
+                            style={styles.removeCircle}
                             onPress={() => removeSet(exerciseIndex, setIndex)}
                           >
                             <Icon
@@ -462,9 +466,15 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
     gap: spacing.sm,
     paddingBottom: spacing.md,
+  },
+  headerSide: {
+    width: 78,
+    justifyContent: "center",
+  },
+  headerSideRight: {
+    alignItems: "flex-end",
   },
   iconButton: {
     width: 42,
@@ -561,19 +571,23 @@ const styles = StyleSheet.create({
   },
   repsInput: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: colors.white,
     borderRadius: 10,
-    paddingHorizontal: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    paddingHorizontal: spacing.md,
     paddingVertical: 10,
     ...typography.body,
     fontSize: 15,
     color: colors.textPrimary,
     textAlign: "center",
   },
-  smallIconButton: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
+  removeCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 2,
+    borderColor: colors.borderLight,
     backgroundColor: colors.background,
     alignItems: "center",
     justifyContent: "center",

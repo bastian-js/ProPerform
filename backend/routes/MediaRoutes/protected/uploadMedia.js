@@ -38,7 +38,10 @@ router.post(
 
       const fileName = req.file.filename;
 
-      const createdByUser = req.user.uid;
+      console.log(req.user);
+
+      const createdByUser =
+        req.user.role === "owner" ? req.user.uid : req.user.tid;
 
       const createdByRole = req.user.role;
 

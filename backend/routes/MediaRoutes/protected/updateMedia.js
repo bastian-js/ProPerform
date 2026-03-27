@@ -16,7 +16,7 @@ router.put(
   requireRole("owner", "trainer"),
   async (req, res) => {
     const userRole = req.user.role;
-    const userId = req.user.uid;
+    const userId = req.user.role === "owner" ? req.user.uid : req.user.tid;
 
     try {
       const { mid } = req.params;

@@ -16,11 +16,7 @@ api.interceptors.request.use(async (config) => {
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
-    const status = error.response?.status;
-    const config = error.config ?? {};
-    config.headers = config.headers ?? {};
-
-    if (status !== 401) throw error;
+    if (error.response?.status !== 401) throw error;
 
     const refreshToken = await SecureStore.getItemAsync("refresh_token");
     if (!refreshToken) throw new Error("SESSION EXPIRED");
@@ -34,8 +30,8 @@ api.interceptors.response.use(
 
     await SecureStore.setItemAsync("access_token", data.access_token);
 
-    config.headers.Authorization = `Bearer ${data.access_token}`;
-    return axios(config);
+    error.config.headers.Authorization = `Bearer ${data.access_token}`;
+    return axios(error.config);
   },
 );
 export default api;

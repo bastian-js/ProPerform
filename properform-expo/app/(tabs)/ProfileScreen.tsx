@@ -24,41 +24,22 @@ export default function ProfileScreen() {
     created_at: string;
   } | null>(null);
   const [loading, setLoading] = React.useState(true);
-  const [error, setError] = React.useState<string | null>(null);
-
-  const inFlightRef = React.useRef(false);
-
-  const getUser = React.useCallback(async (force = false) => {
-    if (!force && inFlightRef.current) return;
-
-    inFlightRef.current = true;
-
-    if (!user) {
-      setLoading(true);
-    }
-
-    setError(null);
-
-    try {
-      const response = await api.get("/users/me");
-      setUser(response.data);
-    } catch (err: any) {
-      if (err.response?.status === 429) {
-        setError("Zu viele Anfragen, bitte kurz warten.");
-      } else {
-        setError("Profil konnte nicht geladen werden.");
-      }
-    } finally {
-      inFlightRef.current = false;
-      setLoading(false);
-    }
-  }, [user]);
 
   useEffect(() => {
+    const getUser = async () => {
+      try {
+        const response = await api.get("/users/me");
+        setUser(response.data);
+      } catch (err) {
+        console.log("Fehler beim Laden des Profils:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
     getUser();
-  }, [getUser]);
+  }, []);
 
-  if (loading && !user) {
+  if (loading) {
     return (
       <SafeAreaView style={styles.container} edges={["top"]}>
         <View style={styles.loaderContainer}>
@@ -89,15 +70,6 @@ export default function ProfileScreen() {
             <Text style={styles.hello}>{user?.firstname ?? "..."}</Text>
           </View>
         </View>
-
-        {error && (
-          <View style={styles.errorContainer}>
-            <Text style={styles.errorText}>{error}</Text>
-            <TouchableOpacity onPress={() => getUser(true)}>
-              <Text style={styles.retryText}>Erneut versuchen</Text>
-            </TouchableOpacity>
-          </View>
-        )}
 
         <View style={styles.infoSection}>
           <Text style={styles.sectionTitle}>PERSÖNLICHE INFORMATIONEN</Text>
@@ -302,22 +274,6 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: colors.textPrimary,
     marginLeft: spacing.lg,
-    fontFamily: "Inter",
-  },
-  errorContainer: {
-    alignItems: "center",
-    marginBottom: spacing.md,
-    gap: spacing.xs,
-  },
-  errorText: {
-    fontSize: 14,
-    color: "red",
-    fontFamily: "Inter",
-  },
-  retryText: {
-    fontSize: 14,
-    color: colors.primaryBlue,
-    fontWeight: "600",
     fontFamily: "Inter",
   },
 });

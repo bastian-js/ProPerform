@@ -15,30 +15,42 @@ router.post("/update", requireAuth, async (req, res) => {
   try {
     const today = new Date().toISOString().slice(0, 10);
 
-    // verhindern, dass mehrfach pro Tag gezählt wird
-    await db.query(
+    // check if a new log entry is created
+    const [logResult] = await db.query(
       `
-      INSERT IGNORE INTO streak_logs (uid, type, activity_date)
-      VALUES (?, ?, ?)
+      insert ignore into streak_logs (uid, type, activity_date)
+      values (?, ?, ?)
       `,
       [uid, type, today],
     );
 
+    // if no row inserted, streak already updated today
+    if (logResult.affectedRows === 0) {
+      const [rows] = await db.query(
+        `select current_streak, longest_streak from streaks where uid = ? and type = ?`,
+        [uid, type],
+      );
+
+      return res.status(200).json({
+        message: "streak already updated today.",
+        current_streak: rows[0]?.current_streak ?? 1,
+        longest_streak: rows[0]?.longest_streak ?? 1,
+      });
+    }
+
     const [rows] = await db.query(
       `
-      SELECT * FROM streaks WHERE uid = ? AND type = ?
+      select * from streaks where uid = ? and type = ?
       `,
       [uid, type],
     );
 
-    let streak;
-
-    // falls noch kein streak existiert → erstellen
+    // create initial streak if none exists
     if (!rows.length) {
       await db.query(
         `
-        INSERT INTO streaks (uid, type, current_streak, longest_streak, last_activity_date)
-        VALUES (?, ?, 1, 1, ?)
+        insert into streaks (uid, type, current_streak, longest_streak, last_activity_date)
+        values (?, ?, 1, 1, ?)
         `,
         [uid, type, today],
       );
@@ -48,10 +60,9 @@ router.post("/update", requireAuth, async (req, res) => {
         current_streak: 1,
         longest_streak: 1,
       });
-    } else {
-      streak = rows[0];
     }
 
+    const streak = rows[0];
     const lastDate = streak.last_activity_date;
 
     const yesterday = new Date();
@@ -63,43 +74,27 @@ router.post("/update", requireAuth, async (req, res) => {
       const last = new Date(lastDate).toISOString().slice(0, 10);
       const yest = yesterday.toISOString().slice(0, 10);
 
-      // schon heute gemacht → nix ändern
-      if (last === today) {
-        return res.status(200).json({
-          message: "streak already updated today.",
-          current_streak: streak.current_streak,
-          longest_streak: streak.longest_streak,
-        });
-      }
-
-      // gestern gemacht → streak erhöhen
+      // increase streak if last activity was yesterday
       if (last === yest) {
         newCurrent = streak.current_streak + 1;
       }
-
-      const newLongest = Math.max(newCurrent, streak.longest_streak);
-
-      await db.query(
-        `
-        UPDATE streaks
-        SET current_streak = ?, longest_streak = ?, last_activity_date = ?
-        WHERE uid = ? AND type = ?
-        `,
-        [newCurrent, newLongest, today, uid, type],
-      );
-
-      return res.status(200).json({
-        message: "streak updated succesfully.",
-        current_streak: newCurrent,
-        longest_streak: newLongest,
-      });
     }
 
-    // fallback (sollte eigentlich nie passieren)
+    const newLongest = Math.max(newCurrent, streak.longest_streak);
+
+    await db.query(
+      `
+      update streaks
+      set current_streak = ?, longest_streak = ?, last_activity_date = ?
+      where uid = ? and type = ?
+      `,
+      [newCurrent, newLongest, today, uid, type],
+    );
+
     return res.status(200).json({
-      message: "no update needed.",
-      current_streak: streak.current_streak,
-      longest_streak: streak.longest_streak,
+      message: "streak updated succesfully.",
+      current_streak: newCurrent,
+      longest_streak: newLongest,
     });
   } catch (err) {
     console.log("update streak error.", err);

@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -175,26 +176,50 @@ export default function TrainingScreen() {
   const handleMorePress = (plan: TrainingPlan) => {
     const userPlan = getUserPlanForTrainingPlan(plan.tpid);
     const isSelected = userPlan?.is_selected === 1;
+    const selectAction = {
+      text: isSelected ? "Plan bereits ausgewählt" : "Plan auswählen",
+      onPress: () => {
+        if (isSelected) {
+          Alert.alert("Info", "Plan ist bereits aktiv.");
+          return;
+        }
+        void handleActivatePlan(plan);
+      },
+    };
+    const editAction = {
+      text: "Bearbeiten",
+      onPress: () => {
+        setEditPlan(plan);
+        setEditVisible(true);
+      },
+    };
+
+    if (Platform.OS === "android") {
+      Alert.alert(plan.name, "Was möchtest du tun?", [
+        { text: "Abbrechen", style: "cancel" },
+        selectAction,
+        {
+          text: "Mehr",
+          onPress: () => {
+            Alert.alert(plan.name, "Weitere Aktionen", [
+              { text: "Abbrechen", style: "cancel" },
+              editAction,
+              {
+                text: "Löschen",
+                style: "destructive",
+                onPress: () => handleDeletePlan(plan.tpid),
+              },
+            ]);
+          },
+        },
+      ]);
+      return;
+    }
 
     Alert.alert(plan.name, "Was möchtest du tun?", [
       { text: "Abbrechen", style: "cancel" },
-      {
-        text: isSelected ? "Plan bereits ausgewählt" : "Plan auswählen",
-        onPress: () => {
-          if (isSelected) {
-            Alert.alert("Info", "Plan ist bereits aktiv.");
-            return;
-          }
-          void handleActivatePlan(plan);
-        },
-      },
-      {
-        text: "Bearbeiten",
-        onPress: () => {
-          setEditPlan(plan);
-          setEditVisible(true);
-        },
-      },
+      selectAction,
+      editAction,
       {
         text: "Löschen",
         style: "destructive",

@@ -13,14 +13,14 @@ function getYesterday(dateStr) {
 
 router.post("/update", requireAuth, async (req, res) => {
   const uid = req.user.uid;
-  const { type, date } = req.body;
+  const { type } = req.body;
 
   if (!type) {
     return res.status(400).json({ message: "type is required." });
   }
 
   try {
-    const today = date || new Date().toLocaleDateString("en-CA");
+    const today = new Date().toLocaleDateString("en-CA");
 
     await db.query(
       `

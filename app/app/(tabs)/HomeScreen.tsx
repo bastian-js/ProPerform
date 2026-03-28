@@ -314,7 +314,11 @@ export default function HomeScreen() {
 
                 <View style={styles.lastWorkoutInfoCard}>
                   <Text style={styles.lastWorkoutInfoLabel}>Status</Text>
-                  <Text style={styles.lastWorkoutInfoValue}>Abgeschlossen</Text>
+                  <Icon
+                    name="check-circle"
+                    size={16}
+                    color={colors.primaryBlue}
+                  />
                 </View>
               </View>
             </>

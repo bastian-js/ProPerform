@@ -7,6 +7,4 @@
   - delete media/:mid
   - put media/:mid
   - get media/all
-
-
-test  - post media/upload
+  - post media/upload

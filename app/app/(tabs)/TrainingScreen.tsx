@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Modal,
   Platform,
   ScrollView,
   StyleSheet,
@@ -11,6 +12,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons as Icon } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { colors } from "@/src/theme/colors";
 import { spacing } from "@/src/theme/spacing";
 import { typography } from "@/src/theme/typography";
@@ -35,6 +37,14 @@ type UserTrainingPlan = {
   tpid: number;
   is_selected: number;
   status: string;
+};
+
+type WorkoutHistoryEntry = {
+  planId: number | null;
+  planName: string;
+  totalSets: number;
+  completedSets: number;
+  completedAt: string;
 };
 
 const getSportIcon = (sport: string) => {
@@ -62,6 +72,10 @@ export default function TrainingScreen() {
   const [editVisible, setEditVisible] = useState(false);
   const [editPlan, setEditPlan] = useState<TrainingPlan | null>(null);
   const [hasTrainer, setHasTrainer] = useState(false);
+  const [historyVisible, setHistoryVisible] = useState(false);
+  const [workoutHistory, setWorkoutHistory] = useState<WorkoutHistoryEntry[]>(
+    [],
+  );
 
   const tabs = hasTrainer ? ["Eigene Pläne", "Trainer"] : ["Eigene Pläne"];
 
@@ -120,6 +134,17 @@ export default function TrainingScreen() {
   const refreshAllPlans = useCallback(async () => {
     await Promise.all([fetchPlans(), fetchUserPlans()]);
   }, [fetchPlans, fetchUserPlans]);
+
+  const loadWorkoutHistory = useCallback(async () => {
+    const historyRaw = await AsyncStorage.getItem("workout_history");
+
+    if (!historyRaw) {
+      setWorkoutHistory([]);
+      return;
+    }
+
+    setWorkoutHistory(JSON.parse(historyRaw));
+  }, []);
 
   const handleActivatePlan = async (plan: TrainingPlan) => {
     const userPlan = getUserPlanForTrainingPlan(plan.tpid);
@@ -232,17 +257,117 @@ export default function TrainingScreen() {
     fetchPlans();
     fetchUserPlans();
     fetchTrainer();
-  }, [fetchPlans, fetchUserPlans, fetchTrainer]);
+    void loadWorkoutHistory();
+  }, [fetchPlans, fetchUserPlans, fetchTrainer, loadWorkoutHistory]);
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={styles.header}>
         <Text style={typography.title}>Trainingspläne</Text>
 
-        <TouchableOpacity onPress={() => setModalVisible(true)}>
-          <Icon name="add" size={28} color={colors.textPrimary} />
-        </TouchableOpacity>
+        <View style={styles.headerActions}>
+          <TouchableOpacity
+            style={styles.headerIconButton}
+            onPress={() => setHistoryVisible(true)}
+          >
+            <Icon name="history" size={24} color={colors.textPrimary} />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.headerIconButton}
+            onPress={() => setModalVisible(true)}
+          >
+            <Icon name="add" size={28} color={colors.textPrimary} />
+          </TouchableOpacity>
+        </View>
       </View>
+
+      {/* Workout History Modal */}
+      <Modal
+        visible={historyVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setHistoryVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <TouchableOpacity
+            style={styles.modalBackdrop}
+            onPress={() => setHistoryVisible(false)}
+          />
+
+          <View style={styles.modalSheet}>
+            <SafeAreaView style={styles.modalContainer} edges={["bottom"]}>
+              <View style={styles.modalHeader}>
+                <View style={styles.modalHeaderSpacer} />
+
+                <View style={styles.modalHeaderCenter}>
+                  <Text style={styles.modalTitle}>Trainingsverlauf</Text>
+                  <Text style={styles.modalSubtitle}>
+                    Deine abgeschlossenen Workouts
+                  </Text>
+                </View>
+
+                <TouchableOpacity
+                  style={styles.modalCloseButton}
+                  onPress={() => setHistoryVisible(false)}
+                >
+                  <Icon name="close" size={24} color={colors.textPrimary} />
+                </TouchableOpacity>
+              </View>
+
+              {workoutHistory.length === 0 ? (
+                <View style={styles.historyEmptyState}>
+                  <Icon
+                    name="history-toggle-off"
+                    size={56}
+                    color={colors.borderLight}
+                  />
+                  <Text style={styles.emptyTitle}>
+                    Noch kein abgeschlossenes Training
+                  </Text>
+                  <Text style={styles.emptySubtitle}>
+                    Sobald du ein Workout beendest, erscheint es hier.
+                  </Text>
+                </View>
+              ) : (
+                <ScrollView
+                  contentContainerStyle={styles.historyList}
+                  showsVerticalScrollIndicator={false}
+                >
+                  {workoutHistory.map((entry, index) => (
+                    <View
+                      key={`${entry.completedAt}-${entry.planId ?? "no-plan"}-${index}`}
+                      style={styles.historyCard}
+                    >
+                      <View style={styles.historyCardTop}>
+                        <View style={styles.historyContent}>
+                          <Text style={styles.historyPlanName} numberOfLines={1}>
+                            {entry.planName}
+                          </Text>
+                          <Text style={styles.historySets}>
+                            Sets erledigt: {entry.completedSets}/{entry.totalSets}
+                          </Text>
+                        </View>
+                        <Text style={styles.historyDate}>
+                          {new Date(entry.completedAt).toLocaleDateString(
+                            "de-AT",
+                            {
+                              day: "2-digit",
+                              month: "2-digit",
+                              year: "numeric",
+                            },
+                          )}
+                        </Text>
+                      </View>
+                    </View>
+                  ))}
+                </ScrollView>
+              )}
+            </SafeAreaView>
+          </View>
+        </View>
+      </Modal>
+      {/* End Workout History Modal */}
 
       <View style={styles.categories}>
         {tabs.map((tab) => (
@@ -394,7 +519,10 @@ export default function TrainingScreen() {
         visible={workoutVisible}
         planId={selectedPlan?.id ?? null}
         planName={selectedPlan?.name ?? ""}
-        onClose={() => setWorkoutVisible(false)}
+        onClose={() => {
+          setWorkoutVisible(false);
+          void loadWorkoutHistory();
+        }}
       />
     </SafeAreaView>
   );
@@ -412,6 +540,19 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingTop: spacing.md,
     marginBottom: spacing.md,
+  },
+  headerActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+  },
+  headerIconButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.white,
+    alignItems: "center",
+    justifyContent: "center",
   },
   categories: {
     flexDirection: "row",
@@ -565,5 +706,112 @@ const styles = StyleSheet.create({
   },
   morevert: {
     marginLeft: spacing.xs,
+  },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: "flex-end",
+  },
+  modalBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.4)",
+  },
+  modalSheet: {
+    backgroundColor: colors.background,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    minHeight: "72%",
+  },
+  modalContainer: {
+    flex: 1,
+    paddingHorizontal: spacing.screenPaddingHorizontal,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.lg,
+  },
+  modalHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: spacing.md,
+  },
+  modalHeaderSpacer: {
+    width: 42,
+  },
+  modalHeaderCenter: {
+    flex: 1,
+    alignItems: "center",
+  },
+  modalTitle: {
+    ...typography.body,
+    fontSize: 18,
+    fontWeight: "700",
+    color: colors.textPrimary,
+  },
+  modalSubtitle: {
+    ...typography.body,
+    fontSize: 13,
+    color: colors.textSecondary,
+    marginTop: 2,
+  },
+  modalCloseButton: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: colors.white,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+  },
+  historyEmptyState: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: spacing.sm,
+    paddingBottom: spacing.xl,
+  },
+  historyList: {
+    gap: spacing.sm,
+    paddingBottom: spacing.md,
+  },
+  historyCard: {
+    backgroundColor: colors.white,
+    borderRadius: 16,
+    padding: spacing.md,
+    shadowColor: "#000",
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+  },
+  historyCardTop: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: spacing.sm,
+  },
+  historyContent: {
+    flex: 1,
+  },
+  historyPlanName: {
+    ...typography.body,
+    flex: 1,
+    fontSize: 16,
+    fontWeight: "700",
+    color: colors.textPrimary,
+  },
+  historyDate: {
+    ...typography.body,
+    width: 88,
+    textAlign: "center",
+    fontSize: 12,
+    color: colors.textSecondary,
+  },
+  historySets: {
+    ...typography.body,
+    fontSize: 14,
+    color: colors.textSecondary,
+    marginTop: 2,
   },
 });

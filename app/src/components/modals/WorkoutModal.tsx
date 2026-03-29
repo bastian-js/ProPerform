@@ -46,6 +46,14 @@ type Props = {
   onClose: () => void;
 };
 
+type WorkoutHistoryEntry = {
+  planId: number | null;
+  planName: string;
+  totalSets: number;
+  completedSets: number;
+  completedAt: string;
+};
+
 const formatTime = (totalSeconds: number) => {
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = totalSeconds % 60;
@@ -279,13 +287,30 @@ export default function WorkoutModal({
 
   const finishWorkout = async () => {
     try {
+      const completedAt = new Date().toISOString();
+      const historyEntry: WorkoutHistoryEntry = {
+        planId,
+        planName: planName || "Workout",
+        totalSets,
+        completedSets,
+        completedAt,
+      };
+      const existingHistoryRaw = await AsyncStorage.getItem("workout_history");
+      const existingHistory: WorkoutHistoryEntry[] = existingHistoryRaw
+        ? JSON.parse(existingHistoryRaw)
+        : [];
+
       await AsyncStorage.setItem(
         "last_workout",
         JSON.stringify({
           name: planName || "Workout",
           duration: seconds,
-          date: new Date().toISOString(),
+          date: completedAt,
         }),
+      );
+      await AsyncStorage.setItem(
+        "workout_history",
+        JSON.stringify([historyEntry, ...existingHistory]),
       );
 
       const streakResponse = await api.post("/users/streaks/update", {

@@ -1,17 +1,10 @@
 import React from "react";
-import { View, Text, Image, StyleSheet } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 
 export default function Header() {
   return (
     <View style={styles.header}>
       <View style={styles.brandRow}>
-        <View style={styles.logoBadge}>
-          <Image
-            source={require("../../assets/images/logo_ohne_bg.png")}
-            style={styles.logo}
-            resizeMode="contain"
-          />
-        </View>
         <Text style={styles.title}>ProPerform</Text>
       </View>
     </View>

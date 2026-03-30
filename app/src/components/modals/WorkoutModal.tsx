@@ -1,7 +1,15 @@
+import { colors } from "@/src/theme/colors";
+import { spacing } from "@/src/theme/spacing";
+import { typography } from "@/src/theme/typography";
+import api from "@/src/utils/axiosInstance";
+import { MaterialIcons as Icon } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Animated,
+  Easing,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -13,12 +21,6 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { MaterialIcons as Icon } from "@expo/vector-icons";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { colors } from "@/src/theme/colors";
-import { typography } from "@/src/theme/typography";
-import { spacing } from "@/src/theme/spacing";
-import api from "@/src/utils/axiosInstance";
 
 type PlanExerciseResponse = {
   id: number;
@@ -44,6 +46,7 @@ type Props = {
   planId: number | null;
   planName: string;
   onClose: () => void;
+  onWorkoutFinished?: () => void;
 };
 
 type WorkoutHistoryEntry = {
@@ -66,6 +69,7 @@ export default function WorkoutModal({
   planId,
   planName,
   onClose,
+  onWorkoutFinished,
 }: Props) {
   const [loading, setLoading] = useState(false);
   const [workoutData, setWorkoutData] = useState<ExerciseProgress[]>([]);
@@ -74,6 +78,29 @@ export default function WorkoutModal({
 
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const activeWorkoutPlanIdRef = useRef<number | null>(null);
+  const backdropOpacity = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(300)).current;
+
+  useEffect(() => {
+    if (visible) {
+      Animated.parallel([
+        Animated.timing(backdropOpacity, {
+          toValue: 1,
+          duration: 150,
+          useNativeDriver: true,
+        }),
+        Animated.timing(slideAnim, {
+          toValue: 0,
+          duration: 350,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }),
+      ]).start();
+    } else {
+      backdropOpacity.setValue(0);
+      slideAnim.setValue(300);
+    }
+  }, [visible]);
 
   const stopTimer = useCallback(() => {
     if (timerRef.current) {
@@ -184,6 +211,7 @@ export default function WorkoutModal({
   const handleClose = () => {
     if (isFinished) {
       resetWorkout();
+      onWorkoutFinished?.();
     }
     onClose();
   };
@@ -339,172 +367,199 @@ export default function WorkoutModal({
   return (
     <Modal
       visible={visible}
-      animationType="slide"
+      animationType="none"
       transparent={true}
       onRequestClose={handleClose}
     >
-      <View style={styles.overlay}>
-        <TouchableOpacity style={styles.backdrop} onPress={handleClose} />
-
-        <KeyboardAvoidingView
-          style={styles.sheet}
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
+      <View style={styles.overlay} pointerEvents="box-none">
+        {/* Backdrop: sofort grau, unabhängig vom Sheet */}
+        <Animated.View
+          style={[styles.absoluteFill, { opacity: backdropOpacity }]}
+          pointerEvents="box-none"
         >
-          <SafeAreaView style={styles.container} edges={["bottom"]}>
-            <View style={styles.header}>
-              <View style={styles.headerSide}>
-                {!isFinished ? (
-                  <View style={styles.timerBadge}>
-                    <Icon name="timer" size={16} color={colors.primaryBlue} />
-                    <Text style={styles.timerText}>{formatTime(seconds)}</Text>
-                  </View>
-                ) : (
-                  <View style={styles.headerSpacer} />
-                )}
-              </View>
+          <TouchableOpacity
+            style={styles.fullscreenBackdrop}
+            activeOpacity={1}
+            onPress={handleClose}
+          />
+        </Animated.View>
 
-              <View style={styles.headerCenter}>
-                <Text style={styles.headerTitle}>{planName || "Workout"}</Text>
-                <Text style={styles.headerSubtitle}>
-                  {completedSets}/{totalSets} Sets erledigt
-                </Text>
-              </View>
-
-              <View style={[styles.headerSide, styles.headerSideRight]}>
-                <TouchableOpacity
-                  style={styles.iconButton}
-                  onPress={handleClose}
-                >
-                  <Icon name="close" size={24} color={colors.textPrimary} />
-                </TouchableOpacity>
-              </View>
-            </View>
-
-            {loading ? (
-              <View style={styles.loaderContainer}>
-                <ActivityIndicator size="large" color={colors.primaryBlue} />
-              </View>
-            ) : isFinished ? (
-              <View style={styles.summary}>
-                <View style={styles.summaryIcon}>
-                  <Icon
-                    name="emoji-events"
-                    size={44}
-                    color={colors.primaryBlue}
-                  />
-                </View>
-                <Text style={styles.summaryTitle}>Workout abgeschlossen</Text>
-                <Text style={styles.summaryText}>
-                  Dauer: {formatTime(seconds)}
-                </Text>
-                <Text style={styles.summaryText}>
-                  Sets: {completedSets}/{totalSets}
-                </Text>
-
-                <TouchableOpacity
-                  style={styles.mainButton}
-                  onPress={handleClose}
-                >
-                  <Text style={styles.mainButtonText}>Training schliessen</Text>
-                </TouchableOpacity>
-              </View>
-            ) : (
-              <>
-                <ScrollView
-                  contentContainerStyle={styles.scrollContent}
-                  showsVerticalScrollIndicator={false}
-                  keyboardShouldPersistTaps="handled"
-                >
-                  {workoutData.map((exercise, exerciseIndex) => (
-                    <View key={exercise.id} style={styles.exerciseCard}>
-                      <Text style={styles.exerciseName}>{exercise.name}</Text>
-
-                      {exercise.sets.map((set, setIndex) => (
-                        <View
-                          key={`${exercise.id}-${setIndex}`}
-                          style={styles.setRow}
-                        >
-                          <Text style={styles.setLabel}>
-                            Satz {setIndex + 1}
-                          </Text>
-
-                          <TextInput
-                            style={styles.repsInput}
-                            placeholder="Wdh."
-                            placeholderTextColor={colors.textSecondary}
-                            keyboardType="numeric"
-                            value={set.reps}
-                            onChangeText={(value) =>
-                              updateReps(exerciseIndex, setIndex, value)
-                            }
-                          />
-
-                          <TouchableOpacity
-                            style={styles.removeCircle}
-                            onPress={() => removeSet(exerciseIndex, setIndex)}
-                          >
-                            <Icon
-                              name="remove"
-                              size={18}
-                              color={colors.textSecondary}
-                            />
-                          </TouchableOpacity>
-
-                          <TouchableOpacity
-                            style={[
-                              styles.checkCircle,
-                              set.isDone && styles.checkCircleActive,
-                            ]}
-                            onPress={() =>
-                              toggleSetDone(exerciseIndex, setIndex)
-                            }
-                          >
-                            <Icon
-                              name="check"
-                              size={18}
-                              color={
-                                set.isDone ? colors.white : colors.textSecondary
-                              }
-                            />
-                          </TouchableOpacity>
-                        </View>
-                      ))}
-
-                      <TouchableOpacity
-                        style={styles.addSetButton}
-                        onPress={() => addSet(exerciseIndex)}
-                      >
-                        <Icon name="add" size={18} color={colors.primaryBlue} />
-                        <Text style={styles.addSetText}>Satz hinzufügen</Text>
-                      </TouchableOpacity>
-                    </View>
-                  ))}
-
-                  {workoutData.length === 0 ? (
-                    <View style={styles.emptyState}>
-                      <Text style={styles.emptyStateText}>
-                        Dieser Trainingsplan hat noch keine Übungen.
+        {/* Sheet: manuell von unten hochslidend */}
+        <Animated.View
+          style={[styles.sheet, { transform: [{ translateY: slideAnim }] }]}
+        >
+          <KeyboardAvoidingView
+            style={{ flex: 1 }}
+            behavior={Platform.OS === "ios" ? "padding" : undefined}
+          >
+            <SafeAreaView style={styles.container} edges={["bottom"]}>
+              <View style={styles.header}>
+                <View style={styles.headerSide}>
+                  {!isFinished ? (
+                    <View style={styles.timerBadge}>
+                      <Icon name="timer" size={16} color={colors.primaryBlue} />
+                      <Text style={styles.timerText}>
+                        {formatTime(seconds)}
                       </Text>
                     </View>
-                  ) : null}
-                </ScrollView>
+                  ) : (
+                    <View style={styles.headerSpacer} />
+                  )}
+                </View>
 
-                <View style={styles.footer}>
+                <View style={styles.headerCenter}>
+                  <Text style={styles.headerTitle}>
+                    {planName || "Workout"}
+                  </Text>
+                  <Text style={styles.headerSubtitle}>
+                    {completedSets}/{totalSets} Sets erledigt
+                  </Text>
+                </View>
+
+                <View style={[styles.headerSide, styles.headerSideRight]}>
                   <TouchableOpacity
-                    style={[
-                      styles.mainButton,
-                      workoutData.length === 0 && styles.mainButtonDisabled,
-                    ]}
-                    onPress={finishWorkout}
-                    disabled={workoutData.length === 0}
+                    style={styles.iconButton}
+                    onPress={handleClose}
                   >
-                    <Text style={styles.mainButtonText}>Workout beenden</Text>
+                    <Icon name="close" size={24} color={colors.textPrimary} />
                   </TouchableOpacity>
                 </View>
-              </>
-            )}
-          </SafeAreaView>
-        </KeyboardAvoidingView>
+              </View>
+
+              {loading ? (
+                <View style={styles.loaderContainer}>
+                  <ActivityIndicator size="large" color={colors.primaryBlue} />
+                </View>
+              ) : isFinished ? (
+                <View style={styles.summary}>
+                  <View style={styles.summaryIcon}>
+                    <Icon
+                      name="emoji-events"
+                      size={44}
+                      color={colors.primaryBlue}
+                    />
+                  </View>
+                  <Text style={styles.summaryTitle}>Workout abgeschlossen</Text>
+                  <Text style={styles.summaryText}>
+                    Dauer: {formatTime(seconds)}
+                  </Text>
+                  <Text style={styles.summaryText}>
+                    Sets: {completedSets}/{totalSets}
+                  </Text>
+
+                  <TouchableOpacity
+                    style={styles.mainButton}
+                    onPress={handleClose}
+                  >
+                    <Text style={styles.mainButtonText}>
+                      Training schliessen
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <>
+                  <ScrollView
+                    contentContainerStyle={styles.scrollContent}
+                    showsVerticalScrollIndicator={false}
+                    keyboardShouldPersistTaps="handled"
+                  >
+                    {workoutData.map((exercise, exerciseIndex) => (
+                      <View key={exercise.id} style={styles.exerciseCard}>
+                        <Text style={styles.exerciseName}>{exercise.name}</Text>
+
+                        {exercise.sets.map((set, setIndex) => (
+                          <View
+                            key={`${exercise.id}-${setIndex}`}
+                            style={styles.setRow}
+                          >
+                            <Text style={styles.setLabel}>
+                              Satz {setIndex + 1}
+                            </Text>
+
+                            <TextInput
+                              style={styles.repsInput}
+                              placeholder="Wdh."
+                              placeholderTextColor={colors.textSecondary}
+                              keyboardType="numeric"
+                              value={set.reps}
+                              onChangeText={(value) =>
+                                updateReps(exerciseIndex, setIndex, value)
+                              }
+                            />
+
+                            <TouchableOpacity
+                              style={styles.removeCircle}
+                              onPress={() => removeSet(exerciseIndex, setIndex)}
+                            >
+                              <Icon
+                                name="remove"
+                                size={18}
+                                color={colors.textSecondary}
+                              />
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                              style={[
+                                styles.checkCircle,
+                                set.isDone && styles.checkCircleActive,
+                              ]}
+                              onPress={() =>
+                                toggleSetDone(exerciseIndex, setIndex)
+                              }
+                            >
+                              <Icon
+                                name="check"
+                                size={18}
+                                color={
+                                  set.isDone
+                                    ? colors.white
+                                    : colors.textSecondary
+                                }
+                              />
+                            </TouchableOpacity>
+                          </View>
+                        ))}
+
+                        <TouchableOpacity
+                          style={styles.addSetButton}
+                          onPress={() => addSet(exerciseIndex)}
+                        >
+                          <Icon
+                            name="add"
+                            size={18}
+                            color={colors.primaryBlue}
+                          />
+                          <Text style={styles.addSetText}>Satz hinzufügen</Text>
+                        </TouchableOpacity>
+                      </View>
+                    ))}
+
+                    {workoutData.length === 0 ? (
+                      <View style={styles.emptyState}>
+                        <Text style={styles.emptyStateText}>
+                          Dieser Trainingsplan hat noch keine Übungen.
+                        </Text>
+                      </View>
+                    ) : null}
+                  </ScrollView>
+
+                  <View style={styles.footer}>
+                    <TouchableOpacity
+                      style={[
+                        styles.mainButton,
+                        workoutData.length === 0 && styles.mainButtonDisabled,
+                      ]}
+                      onPress={finishWorkout}
+                      disabled={workoutData.length === 0}
+                    >
+                      <Text style={styles.mainButtonText}>Workout beenden</Text>
+                    </TouchableOpacity>
+                  </View>
+                </>
+              )}
+            </SafeAreaView>
+          </KeyboardAvoidingView>
+        </Animated.View>
       </View>
     </Modal>
   );
@@ -515,12 +570,13 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "flex-end",
   },
-  backdrop: {
+  fullscreenBackdrop: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: "rgba(0,0,0,0.4)",
+    zIndex: 0,
   },
   sheet: {
-    backgroundColor: colors.background,
+    backgroundColor: colors.white,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     height: "80%",
@@ -746,5 +802,13 @@ const styles = StyleSheet.create({
     color: colors.white,
     fontSize: 16,
     fontWeight: "600",
+  },
+  absoluteFill: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 0,
   },
 });

@@ -1,7 +1,15 @@
+import { colors } from "@/src/theme/colors";
+import { spacing } from "@/src/theme/spacing";
+import { typography } from "@/src/theme/typography";
+import api from "@/src/utils/axiosInstance";
+import { MaterialIcons as Icon } from "@expo/vector-icons";
+import DateTimePicker from "@react-native-community/datetimepicker";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Animated,
+  Easing,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -12,12 +20,6 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import DateTimePicker from "@react-native-community/datetimepicker";
-import { MaterialIcons as Icon } from "@expo/vector-icons";
-import { colors } from "@/src/theme/colors";
-import { spacing } from "@/src/theme/spacing";
-import { typography } from "@/src/theme/typography";
-import api from "@/src/utils/axiosInstance";
 
 type Exercise = {
   eid: number;
@@ -43,27 +45,71 @@ const SPORTS = [
   { id: 1, label: "Gym", value: "gym" },
   { id: 2, label: "Basketball", value: "basketball" },
 ];
+const SESSION_OPTIONS = [1, 2, 3, 4, 5, 6, 7];
 
 const formatDate = (date: Date) => date.toISOString().split("T")[0];
+const getTodayAtMidnight = () => {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return today;
+};
 const getSportFilter = (sportId: number) =>
   SPORTS.find((sport) => sport.id === sportId)?.value ?? "gym";
 const getSportLabel = (sportId: number) =>
   SPORTS.find((sport) => sport.id === sportId)?.label ?? "Gym";
-const sanitizeSessionsInput = (value: string) => {
-  const digitsOnly = value.replace(/\D/g, "");
-
-  if (!digitsOnly) {
-    return "";
-  }
-
-  return String(Math.min(parseInt(digitsOnly, 10), 7));
-};
 
 export default function CreatePlanModal({
   visible,
   onClose,
   onPlanCreated,
 }: Props) {
+  const [internalVisible, setInternalVisible] = useState(false);
+  const backdropOpacity = React.useRef(new Animated.Value(0)).current;
+  const slideAnim = React.useRef(new Animated.Value(300)).current;
+
+  React.useEffect(() => {
+    if (visible) {
+      setInternalVisible(true);
+      Animated.parallel([
+        Animated.timing(backdropOpacity, {
+          toValue: 1,
+          duration: 150,
+          useNativeDriver: true,
+        }),
+        Animated.timing(slideAnim, {
+          toValue: 0,
+          duration: 350,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }),
+      ]).start();
+    } else {
+      backdropOpacity.setValue(0);
+      slideAnim.setValue(300);
+      setInternalVisible(false);
+    }
+  }, [visible]);
+
+  const handleClose = () => {
+    Animated.parallel([
+      Animated.timing(backdropOpacity, {
+        toValue: 0,
+        duration: 250,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 300,
+        duration: 280,
+        easing: Easing.in(Easing.cubic),
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      setInternalVisible(false);
+      onClose();
+    });
+  };
+  const minimumStartDate = React.useMemo(() => getTodayAtMidnight(), [visible]);
+
   const [step, setStep] = useState(1);
   const [saving, setSaving] = useState(false);
   const [createdPlanId, setCreatedPlanId] = useState<number | null>(null);
@@ -71,7 +117,7 @@ export default function CreatePlanModal({
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [sportId, setSportId] = useState(2);
-  const [sessionsPerWeek, setSessionsPerWeek] = useState("");
+  const [sessionsPerWeek, setSessionsPerWeek] = useState<number | null>(null);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [tempStartDate, setTempStartDate] = useState<Date>(new Date());
   const [startDate, setStartDate] = useState<Date | null>(null);
@@ -86,14 +132,14 @@ export default function CreatePlanModal({
       setName("");
       setDescription("");
       setSportId(2);
-      setSessionsPerWeek("");
+      setSessionsPerWeek(null);
       setShowDatePicker(false);
-      setTempStartDate(new Date());
+      setTempStartDate(minimumStartDate);
       setStartDate(null);
       setSelectedEids([]);
       setCreatedPlanId(null);
     }
-  }, [visible]);
+  }, [visible, minimumStartDate]);
 
   useEffect(() => {
     if (step === 2) {
@@ -115,23 +161,35 @@ export default function CreatePlanModal({
     }
   };
 
+  const handleSelectToday = () => {
+    setTempStartDate(minimumStartDate);
+    setStartDate(minimumStartDate);
+    setShowDatePicker(false);
+  };
+
   const onStartDateChange = (_: any, selectedDate?: Date) => {
     if (Platform.OS === "android") {
       if (selectedDate) {
-        setTempStartDate(selectedDate);
-        setStartDate(selectedDate);
+        const nextDate =
+          selectedDate < minimumStartDate ? minimumStartDate : selectedDate;
+        setTempStartDate(nextDate);
+        setStartDate(nextDate);
       }
       setShowDatePicker(false);
       return;
     }
 
     if (selectedDate) {
-      setTempStartDate(selectedDate);
+      setTempStartDate(
+        selectedDate < minimumStartDate ? minimumStartDate : selectedDate,
+      );
     }
   };
 
   const confirmIOSStartDate = () => {
-    setStartDate(tempStartDate);
+    setStartDate(
+      tempStartDate < minimumStartDate ? minimumStartDate : tempStartDate,
+    );
     setShowDatePicker(false);
   };
 
@@ -157,7 +215,7 @@ export default function CreatePlanModal({
         sportId,
         difficultyLevelId: 1,
         durationWeeks: 1,
-        sessionsPerWeek: parseInt(sessionsPerWeek),
+        sessionsPerWeek,
       });
       setCreatedPlanId(response.data.planId);
       setStep(2);
@@ -227,7 +285,7 @@ export default function CreatePlanModal({
       console.log("User training plan id", userTrainingPlanId);
 
       onPlanCreated();
-      onClose();
+      handleClose();
     } catch (err: any) {
       Alert.alert(
         "Fehler",
@@ -241,224 +299,273 @@ export default function CreatePlanModal({
 
   return (
     <Modal
-      visible={visible}
-      animationType="slide"
+      visible={internalVisible}
+      animationType="none"
       transparent
-      onRequestClose={onClose}
+      onRequestClose={handleClose}
     >
-      <View style={styles.overlay}>
-        <TouchableOpacity style={styles.backdrop} onPress={onClose} />
-        <KeyboardAvoidingView
-          style={styles.sheet}
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
+      <View style={styles.overlay} pointerEvents="box-none">
+        <Animated.View style={[styles.absoluteFill, { opacity: backdropOpacity }]} pointerEvents="box-none">
+          <TouchableOpacity
+            style={styles.fullscreenBackdrop}
+            activeOpacity={1}
+            onPress={handleClose}
+          />
+        </Animated.View>
+        <Animated.View
+          style={[styles.sheet, { transform: [{ translateY: slideAnim }] }]}
         >
-          <View style={styles.header}>
-            <View style={styles.headerSpacer} />
-            <Text style={styles.title}>
-              {step === 1 ? "Neuer Trainingsplan" : "Übungen auswählen"}
-            </Text>
-            <TouchableOpacity style={styles.iconButton} onPress={onClose}>
-              <Icon name="close" size={24} color={colors.textPrimary} />
-            </TouchableOpacity>
-          </View>
-
-          {step === 1 && (
-            <ScrollView
-              showsVerticalScrollIndicator={false}
-              contentContainerStyle={styles.content}
-              keyboardShouldPersistTaps="handled"
-            >
-              <Text style={styles.label}>Name *</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="z.B. Push Day Workout"
-                placeholderTextColor={colors.textSecondary}
-                value={name}
-                onChangeText={setName}
-              />
-
-              <Text style={styles.label}>Beschreibung</Text>
-              <TextInput
-                style={[styles.input, styles.textArea]}
-                placeholder="Kurze Beschreibung..."
-                placeholderTextColor={colors.textSecondary}
-                value={description}
-                onChangeText={setDescription}
-                multiline
-                numberOfLines={3}
-              />
-
-              <Text style={styles.label}>Sport *</Text>
-              <View style={styles.chipRow}>
-                {SPORTS.map((s) => (
-                  <TouchableOpacity
-                    key={s.id}
-                    style={[styles.chip, sportId === s.id && styles.chipActive]}
-                    onPress={() => setSportId(s.id)}
-                  >
-                    <Text
-                      style={[
-                        styles.chipText,
-                        sportId === s.id && styles.chipTextActive,
-                      ]}
-                    >
-                      {s.label}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-
-              <Text style={styles.label}>Sessions pro Woche *</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="z.B. 4"
-                placeholderTextColor={colors.textSecondary}
-                value={sessionsPerWeek}
-                onChangeText={(value) =>
-                  setSessionsPerWeek(sanitizeSessionsInput(value))
-                }
-                keyboardType="numeric"
-              />
-
-              <Text style={styles.label}>Startdatum *</Text>
-              <TouchableOpacity
-                style={styles.input}
-                onPress={() => setShowDatePicker(true)}
-                activeOpacity={0.8}
-              >
-                <Text
-                  style={{
-                    color: startDate
-                      ? colors.textPrimary
-                      : colors.textSecondary,
-                  }}
-                >
-                  {startDate ? formatDate(startDate) : "YYYY-MM-DD"}
-                </Text>
+          <KeyboardAvoidingView
+            style={{ flex: 1 }}
+            behavior={Platform.OS === "ios" ? "padding" : undefined}
+          >
+            <View style={styles.header}>
+              <View style={styles.headerSpacer} />
+              <Text style={styles.title}>
+                {step === 1 ? "Neuer Trainingsplan" : "Übungen auswählen"}
+              </Text>
+              <TouchableOpacity style={styles.iconButton} onPress={handleClose}>
+                <Icon name="close" size={24} color={colors.textPrimary} />
               </TouchableOpacity>
+            </View>
 
-              {showDatePicker && (
-                <View style={styles.datePickerContainer}>
-                  <DateTimePicker
-                    value={tempStartDate}
-                    mode="date"
-                    display={Platform.OS === "ios" ? "spinner" : "default"}
-                    onChange={onStartDateChange}
-                    locale="de-DE"
-                    themeVariant="light"
-                  />
-                  {Platform.OS === "ios" && (
-                    <TouchableOpacity
-                      style={styles.datePickerConfirmButton}
-                      onPress={confirmIOSStartDate}
-                    >
-                      <Text style={styles.datePickerConfirmText}>Fertig</Text>
-                    </TouchableOpacity>
-                  )}
-                </View>
-              )}
-
-              <TouchableOpacity
-                style={[styles.button, saving && styles.buttonDisabled]}
-                onPress={handleNextStep}
-                disabled={saving}
+            {step === 1 && (
+              <ScrollView
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={styles.content}
+                keyboardShouldPersistTaps="handled"
               >
-                {saving ? (
-                  <ActivityIndicator size="small" color={colors.white} />
-                ) : (
-                  <>
-                    <Text style={styles.buttonText}>Weiter</Text>
-                    <Icon name="arrow-forward" size={20} color={colors.white} />
-                  </>
-                )}
-              </TouchableOpacity>
-            </ScrollView>
-          )}
-
-          {step === 2 && (
-            <View style={styles.stepTwoContainer}>
-              <View style={styles.filterRow}>
-                <View style={[styles.chip, styles.chipActive]}>
-                  <Text style={[styles.chipText, styles.chipTextActive]}>
-                    {getSportLabel(sportId)}
-                  </Text>
-                </View>
-                <Text style={styles.selectedCount}>
-                  {selectedEids.length} ausgewählt
-                </Text>
-              </View>
-
-              {loadingExercises ? (
-                <ActivityIndicator
-                  size="large"
-                  color={colors.primaryBlue}
-                  style={styles.loader}
+                <Text style={styles.label}>Name*</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="z.B. Push Day Workout"
+                  placeholderTextColor={colors.textSecondary}
+                  value={name}
+                  onChangeText={setName}
                 />
-              ) : (
-                <ScrollView
-                  style={styles.stepTwoScroll}
-                  showsVerticalScrollIndicator={false}
-                  contentContainerStyle={styles.exerciseList}
-                  keyboardShouldPersistTaps="handled"
-                >
-                  {exercises.map((ex) => {
-                    const selected = selectedEids.includes(ex.eid);
+
+                <Text style={styles.label}>Beschreibung</Text>
+                <TextInput
+                  style={[styles.input, styles.textArea]}
+                  placeholder="Kurze Beschreibung..."
+                  placeholderTextColor={colors.textSecondary}
+                  value={description}
+                  onChangeText={setDescription}
+                  multiline
+                  numberOfLines={3}
+                />
+
+                <Text style={styles.label}>Sport*</Text>
+                <View style={styles.chipRow}>
+                  {SPORTS.map((s) => (
+                    <TouchableOpacity
+                      key={s.id}
+                      style={[
+                        styles.chip,
+                        sportId === s.id && styles.chipActive,
+                      ]}
+                      onPress={() => setSportId(s.id)}
+                    >
+                      <Text
+                        style={[
+                          styles.chipText,
+                          sportId === s.id && styles.chipTextActive,
+                        ]}
+                      >
+                        {s.label}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+
+                <Text style={styles.label}>Sessions pro Woche*</Text>
+                <View style={styles.sessionsRow}>
+                  {SESSION_OPTIONS.map((count) => {
+                    const selected = sessionsPerWeek === count;
                     return (
                       <TouchableOpacity
-                        key={ex.eid}
+                        key={count}
                         style={[
-                          styles.exerciseRow,
-                          selected && styles.exerciseRowSelected,
+                          styles.sessionButton,
+                          selected && styles.sessionButtonActive,
                         ]}
-                        onPress={() => toggleExercise(ex.eid)}
-                        activeOpacity={0.7}
+                        onPress={() => setSessionsPerWeek(count)}
+                        activeOpacity={0.8}
                       >
-                        <View style={styles.exerciseIcon}>
-                          <Icon
-                            name="fitness-center"
-                            size={18}
-                            color={selected ? colors.white : colors.primaryBlue}
-                          />
-                        </View>
                         <Text
                           style={[
-                            styles.exerciseName,
-                            selected && styles.exerciseNameSelected,
+                            styles.sessionButtonText,
+                            selected && styles.sessionButtonTextActive,
                           ]}
                         >
-                          {ex.name}
+                          {count}x
                         </Text>
-                        {selected && (
-                          <Icon
-                            name="check-circle"
-                            size={22}
-                            color={colors.white}
-                          />
-                        )}
                       </TouchableOpacity>
                     );
                   })}
-                </ScrollView>
-              )}
+                </View>
 
-              <TouchableOpacity
-                style={[
-                  styles.button,
-                  styles.buttonBottom,
-                  saving && styles.buttonDisabled,
-                ]}
-                onPress={handleSavePlan}
-                disabled={saving}
-              >
-                {saving ? (
-                  <ActivityIndicator size="small" color={colors.white} />
-                ) : (
-                  <Text style={styles.buttonText}>Plan speichern</Text>
+                <Text style={styles.label}>Startdatum*</Text>
+                <TouchableOpacity
+                  style={styles.input}
+                  onPress={() => setShowDatePicker(true)}
+                  activeOpacity={0.8}
+                >
+                  <Text
+                    style={{
+                      color: startDate
+                        ? colors.textPrimary
+                        : colors.textSecondary,
+                    }}
+                  >
+                    {startDate ? formatDate(startDate) : "YYYY-MM-DD"}
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.todayButton}
+                  onPress={handleSelectToday}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.todayButtonText}>Heute</Text>
+                </TouchableOpacity>
+
+                {showDatePicker && (
+                  <View style={styles.datePickerContainer}>
+                    <DateTimePicker
+                      value={
+                        tempStartDate < minimumStartDate
+                          ? minimumStartDate
+                          : tempStartDate
+                      }
+                      mode="date"
+                      display={Platform.OS === "ios" ? "spinner" : "default"}
+                      onChange={onStartDateChange}
+                      minimumDate={minimumStartDate}
+                      locale="de-DE"
+                      themeVariant="light"
+                    />
+                    {Platform.OS === "ios" && (
+                      <TouchableOpacity
+                        style={styles.datePickerConfirmButton}
+                        onPress={confirmIOSStartDate}
+                      >
+                        <Text style={styles.datePickerConfirmText}>Fertig</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
                 )}
-              </TouchableOpacity>
-            </View>
-          )}
-        </KeyboardAvoidingView>
+
+                <TouchableOpacity
+                  style={[styles.button, saving && styles.buttonDisabled]}
+                  onPress={handleNextStep}
+                  disabled={saving}
+                >
+                  {saving ? (
+                    <ActivityIndicator size="small" color={colors.white} />
+                  ) : (
+                    <>
+                      <Text style={styles.buttonText}>Weiter</Text>
+                      <Icon
+                        name="arrow-forward"
+                        size={20}
+                        color={colors.white}
+                      />
+                    </>
+                  )}
+                </TouchableOpacity>
+              </ScrollView>
+            )}
+
+            {step === 2 && (
+              <View style={styles.stepTwoContainer}>
+                <View style={styles.filterRow}>
+                  <View style={[styles.chip, styles.chipActive]}>
+                    <Text style={[styles.chipText, styles.chipTextActive]}>
+                      {getSportLabel(sportId)}
+                    </Text>
+                  </View>
+                  <Text style={styles.selectedCount}>
+                    {selectedEids.length} ausgewählt
+                  </Text>
+                </View>
+
+                {loadingExercises ? (
+                  <ActivityIndicator
+                    size="large"
+                    color={colors.primaryBlue}
+                    style={styles.loader}
+                  />
+                ) : (
+                  <View style={styles.stepTwoListWrap}>
+                    <ScrollView
+                      style={styles.stepTwoScroll}
+                      showsVerticalScrollIndicator={false}
+                      contentContainerStyle={styles.exerciseList}
+                      keyboardShouldPersistTaps="handled"
+                    >
+                      {exercises.map((ex) => {
+                        const selected = selectedEids.includes(ex.eid);
+                        return (
+                          <TouchableOpacity
+                            key={ex.eid}
+                            style={[
+                              styles.exerciseRow,
+                              selected && styles.exerciseRowSelected,
+                            ]}
+                            onPress={() => toggleExercise(ex.eid)}
+                            activeOpacity={0.7}
+                          >
+                            <View style={styles.exerciseIcon}>
+                              <Icon
+                                name="fitness-center"
+                                size={18}
+                                color={
+                                  selected ? colors.white : colors.primaryBlue
+                                }
+                              />
+                            </View>
+                            <Text
+                              style={[
+                                styles.exerciseName,
+                                selected && styles.exerciseNameSelected,
+                              ]}
+                            >
+                              {ex.name}
+                            </Text>
+                            {selected && (
+                              <Icon
+                                name="check-circle"
+                                size={22}
+                                color={colors.white}
+                              />
+                            )}
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </ScrollView>
+                  </View>
+                )}
+
+                <TouchableOpacity
+                  style={[
+                    styles.button,
+                    styles.buttonBottom,
+                    saving && styles.buttonDisabled,
+                  ]}
+                  onPress={handleSavePlan}
+                  disabled={saving}
+                >
+                  {saving ? (
+                    <ActivityIndicator size="small" color={colors.white} />
+                  ) : (
+                    <Text style={styles.buttonText}>Plan speichern</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            )}
+          </KeyboardAvoidingView>
+        </Animated.View>
       </View>
     </Modal>
   );
@@ -469,12 +576,21 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "flex-end",
   },
-  backdrop: {
+  absoluteFill: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 0,
+  },
+  fullscreenBackdrop: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: "rgba(0,0,0,0.4)",
+    zIndex: 0,
   },
   sheet: {
-    backgroundColor: colors.background,
+    backgroundColor: colors.white,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     paddingHorizontal: spacing.screenPaddingHorizontal,
@@ -539,6 +655,24 @@ const styles = StyleSheet.create({
     height: 90,
     textAlignVertical: "top",
   },
+  todayButton: {
+    alignSelf: "flex-start",
+    backgroundColor: colors.white,
+    borderRadius: 999,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    marginTop: spacing.xs,
+    shadowColor: "#000",
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+  },
+  todayButtonText: {
+    ...typography.body,
+    color: colors.primaryBlue,
+    fontWeight: "600",
+  },
   datePickerContainer: {
     backgroundColor: colors.white,
     borderRadius: 14,
@@ -563,6 +697,37 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: spacing.sm,
     flexWrap: "wrap",
+  },
+  sessionsRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.sm,
+  },
+  sessionButton: {
+    minWidth: 48,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: spacing.md,
+    paddingVertical: 12,
+    borderRadius: 999,
+    backgroundColor: colors.white,
+    shadowColor: "#000",
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 1 },
+    elevation: 1,
+  },
+  sessionButtonActive: {
+    backgroundColor: colors.primaryBlue,
+  },
+  sessionButtonText: {
+    ...typography.body,
+    fontSize: 15,
+    color: colors.textSecondary,
+    fontWeight: "600",
+  },
+  sessionButtonTextActive: {
+    color: colors.white,
   },
   chip: {
     paddingHorizontal: spacing.md,
@@ -666,7 +831,10 @@ const styles = StyleSheet.create({
   stepTwoContainer: {
     flex: 1,
   },
+  stepTwoListWrap: {
+    flexShrink: 1,
+  },
   stepTwoScroll: {
-    flex: 1,
+    flexGrow: 0,
   },
 });

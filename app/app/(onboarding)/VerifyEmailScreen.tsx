@@ -107,7 +107,7 @@ export default function VerifyEmailScreen() {
 
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        behavior={Platform.OS === "ios" ? "height" : undefined}
       >
         <ScrollView
           contentContainerStyle={[
@@ -117,7 +117,9 @@ export default function VerifyEmailScreen() {
           keyboardShouldPersistTaps="always"
           keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "none"}
         >
-          <View style={[styles.header, isCompact ? styles.headerCompact : null]}>
+          <View
+            style={[styles.header, isCompact ? styles.headerCompact : null]}
+          >
             <Text style={typography.title}>E-Mail bestätigen</Text>
             <Text style={[typography.body, styles.subheader]}>
               Gib den 6-stelligen Code ein
@@ -162,7 +164,10 @@ export default function VerifyEmailScreen() {
           </TouchableOpacity>
 
           <View
-            style={[styles.navigation, isCompact ? styles.navigationCompact : null]}
+            style={[
+              styles.navigation,
+              isCompact ? styles.navigationCompact : null,
+            ]}
           >
             <TouchableOpacity style={styles.arrowButton} onPress={handleBack}>
               <Icon name="arrow-back" size={24} color={colors.white} />

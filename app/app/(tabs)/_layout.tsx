@@ -1,3 +1,6 @@
+import ActiveWorkoutPill from "@/src/components/ActiveWorkoutPill";
+import WorkoutModal from "@/src/components/modals/WorkoutModal";
+import { useWorkout } from "@/src/context/WorkoutContext";
 import { MaterialIcons as Icon } from "@expo/vector-icons";
 import axios from "axios";
 import Constants from "expo-constants";
@@ -5,6 +8,7 @@ import * as Notifications from "expo-notifications";
 import { Tabs } from "expo-router";
 import * as SecureStore from "expo-secure-store";
 import { useEffect } from "react";
+import { View } from "react-native";
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -16,6 +20,8 @@ Notifications.setNotificationHandler({
 });
 
 export default function TabLayout() {
+  const { modalVisible, planId, planName, hideModal, stopWorkout } = useWorkout();
+
   useEffect(() => {
     console.log("🚀 TabLayout mounted");
 
@@ -88,6 +94,7 @@ export default function TabLayout() {
   }, []);
 
   return (
+    <View style={{ flex: 1 }}>
     <Tabs
       screenOptions={{
         headerShown: false,
@@ -149,5 +156,14 @@ export default function TabLayout() {
         }}
       />
     </Tabs>
+    <ActiveWorkoutPill />
+    <WorkoutModal
+      visible={modalVisible}
+      planId={planId}
+      planName={planName}
+      onClose={hideModal}
+      onWorkoutFinished={stopWorkout}
+    />
+  </View>
   );
 }

@@ -11,7 +11,6 @@ import { useFocusEffect } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   Modal,
   ScrollView,
   StyleSheet,
@@ -247,11 +246,7 @@ export default function HomeScreen() {
       setCompleted(nextCompleted);
     } catch (err: any) {
       if (err.response?.status !== 404) {
-        Alert.alert(
-          "Fehler",
-          err.response?.data?.message ||
-            "Training-Streak konnte nicht geladen werden.",
-        );
+        return;
       }
       setStreakDays(0);
       setLongestStreak(0);
@@ -497,7 +492,6 @@ export default function HomeScreen() {
               </View>
             ) : selectedTrainingPlan ? (
               <View style={styles.durationBadge}>
-                <Text style={styles.durationIcon}>🗓</Text>
                 <Text style={styles.durationText}>
                   {selectedTrainingPlan.training_plan.sessions_per_week}x pro
                   Woche
@@ -537,7 +531,7 @@ export default function HomeScreen() {
                 ]}
               >
                 {selectedTrainingPlan.training_plan.description ||
-                  `${selectedTrainingPlan.training_plan.sessions_per_week}x pro Woche`}
+                  `${selectedTrainingPlan.training_plan.sessions_per_week}x/Woche`}
               </Text>
 
               <View style={styles.trainingButtonWrap}>
@@ -994,7 +988,7 @@ const styles = StyleSheet.create({
   },
   durationText: {
     fontFamily: "Inter",
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: "700",
     color: colors.white,
   },
@@ -1011,11 +1005,11 @@ const styles = StyleSheet.create({
   },
   trainingSubtext: {
     fontFamily: "Inter",
-    fontSize: 14,
+    fontSize: 16,
     color: "#FFFFFFCC",
     marginTop: -spacing.xs,
     marginBottom: spacing.sm,
-    lineHeight: 20,
+    lineHeight: 18,
   },
   trainingSubtextCompact: {
     fontSize: 13,

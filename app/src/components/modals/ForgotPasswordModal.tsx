@@ -1,18 +1,20 @@
+import InputField from "@/src/components/input";
+import { colors } from "@/src/theme/colors";
+import { spacing } from "@/src/theme/spacing";
+import axios from "axios";
 import React from "react";
 import {
-  View,
-  Text,
-  StyleSheet,
+  Alert,
+  Animated,
+  Easing,
   KeyboardAvoidingView,
   Modal,
   Platform,
+  StyleSheet,
+  Text,
   TouchableOpacity,
-  Alert,
+  View,
 } from "react-native";
-import { colors } from "@/src/theme/colors";
-import { spacing } from "@/src/theme/spacing";
-import InputField from "@/src/components/input";
-import axios from "axios";
 
 interface Props {
   visible: boolean;
@@ -22,6 +24,51 @@ interface Props {
 export default function ForgotPasswordModal({ visible, onClose }: Props) {
   const [email, setEmail] = React.useState("");
   const [loading, setLoading] = React.useState(false);
+  const [internalVisible, setInternalVisible] = React.useState(false);
+  const backdropOpacity = React.useRef(new Animated.Value(0)).current;
+  const slideAnim = React.useRef(new Animated.Value(300)).current;
+
+  React.useEffect(() => {
+    if (visible) {
+      setInternalVisible(true);
+      Animated.parallel([
+        Animated.timing(backdropOpacity, {
+          toValue: 1,
+          duration: 150,
+          useNativeDriver: true,
+        }),
+        Animated.timing(slideAnim, {
+          toValue: 0,
+          duration: 350,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }),
+      ]).start();
+    } else {
+      backdropOpacity.setValue(0);
+      slideAnim.setValue(300);
+      setInternalVisible(false);
+    }
+  }, [visible]);
+
+  const handleClose = () => {
+    Animated.parallel([
+      Animated.timing(backdropOpacity, {
+        toValue: 0,
+        duration: 250,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 300,
+        duration: 280,
+        easing: Easing.in(Easing.cubic),
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      setInternalVisible(false);
+      onClose();
+    });
+  };
 
   const handleResetPassword = async () => {
     if (!email.trim()) {
@@ -42,7 +89,7 @@ export default function ForgotPasswordModal({ visible, onClose }: Props) {
       );
 
       setEmail("");
-      onClose();
+      handleClose();
     } catch (err: any) {
       const message =
         err.response?.data?.error ||
@@ -54,12 +101,25 @@ export default function ForgotPasswordModal({ visible, onClose }: Props) {
   };
 
   return (
-    <Modal visible={visible} transparent animationType="fade">
-      <View style={styles.overlay}>
-        <KeyboardAvoidingView
-          style={styles.container}
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
+    <Modal visible={internalVisible} transparent animationType="none">
+      <View style={styles.overlay} pointerEvents="box-none">
+        <Animated.View
+          style={[styles.absoluteFill, { opacity: backdropOpacity }]}
+          pointerEvents="box-none"
         >
+          <TouchableOpacity
+            style={styles.fullscreenBackdrop}
+            activeOpacity={1}
+            onPress={handleClose}
+          />
+        </Animated.View>
+        <Animated.View
+          style={[styles.container, { transform: [{ translateY: slideAnim }] }]}
+        >
+          <KeyboardAvoidingView
+            style={{ flex: 1 }}
+            behavior={Platform.OS === "ios" ? "padding" : undefined}
+          >
           <Text style={styles.title}>Passwort zurücksetzen</Text>
 
           <Text style={styles.description}>
@@ -81,10 +141,11 @@ export default function ForgotPasswordModal({ visible, onClose }: Props) {
             <Text style={styles.buttonText}>Link senden</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity onPress={onClose} style={styles.closeWrap}>
+          <TouchableOpacity onPress={handleClose} style={styles.closeWrap}>
             <Text style={styles.closeText}>Abbrechen</Text>
           </TouchableOpacity>
-        </KeyboardAvoidingView>
+          </KeyboardAvoidingView>
+        </Animated.View>
       </View>
     </Modal>
   );
@@ -96,6 +157,11 @@ const styles = StyleSheet.create({
     backgroundColor: "#00000066",
     justifyContent: "center",
     padding: spacing.lg,
+  },
+  fullscreenBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "#00000066",
+    zIndex: 0,
   },
 
   container: {
@@ -143,5 +209,13 @@ const styles = StyleSheet.create({
     fontFamily: "Inter",
     fontSize: 14,
     color: colors.textSecondary,
+  },
+  absoluteFill: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 0,
   },
 });

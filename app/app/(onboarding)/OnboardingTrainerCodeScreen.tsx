@@ -91,7 +91,7 @@ export default function OnboardingTrainerCodeScreen() {
       <Header />
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        behavior={Platform.OS === "ios" ? "height" : undefined}
       >
         <ScrollView
           contentContainerStyle={[
@@ -102,7 +102,9 @@ export default function OnboardingTrainerCodeScreen() {
           showsVerticalScrollIndicator={false}
           keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "none"}
         >
-          <View style={[styles.header, isCompact ? styles.headerCompact : null]}>
+          <View
+            style={[styles.header, isCompact ? styles.headerCompact : null]}
+          >
             <Text style={typography.title}>Trainer verbinden</Text>
             <Text style={[typography.body, styles.subheader]}>
               Gib den Code deines Trainers ein
@@ -184,7 +186,10 @@ export default function OnboardingTrainerCodeScreen() {
           </Text>
 
           <View
-            style={[styles.navigation, isCompact ? styles.navigationCompact : null]}
+            style={[
+              styles.navigation,
+              isCompact ? styles.navigationCompact : null,
+            ]}
           >
             <TouchableOpacity style={styles.arrowButton} onPress={handleBack}>
               <Icon name="arrow-back" size={24} color={colors.white} />

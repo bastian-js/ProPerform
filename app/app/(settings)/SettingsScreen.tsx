@@ -54,7 +54,7 @@ export default function SettingsScreen() {
           style: "destructive",
           onPress: async () => {
             await clearUserSessionData();
-            router.replace("/(auth)/LoginScreen");
+            router.replace("/(onboarding)/OnboardingScreen");
           },
         },
       ],

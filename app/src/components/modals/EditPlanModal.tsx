@@ -1,22 +1,24 @@
-import React, { useState, useEffect } from "react";
+import { colors } from "@/src/theme/colors";
+import { spacing } from "@/src/theme/spacing";
+import { typography } from "@/src/theme/typography";
+import api from "@/src/utils/axiosInstance";
+import { MaterialIcons as Icon } from "@expo/vector-icons";
+import React, { useEffect, useState } from "react";
 import {
-  Modal,
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  ScrollView,
-  TextInput,
   ActivityIndicator,
   Alert,
+  Animated,
+  Easing,
   KeyboardAvoidingView,
+  Modal,
   Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
-import { MaterialIcons as Icon } from "@expo/vector-icons";
-import { colors } from "@/src/theme/colors";
-import { typography } from "@/src/theme/typography";
-import { spacing } from "@/src/theme/spacing";
-import api from "@/src/utils/axiosInstance";
 
 type TrainingPlan = {
   tpid: number;
@@ -61,6 +63,51 @@ export default function EditPlanModal({
   onClose,
   onPlanUpdated,
 }: Props) {
+  const [internalVisible, setInternalVisible] = useState(false);
+  const backdropOpacity = React.useRef(new Animated.Value(0)).current;
+  const slideAnim = React.useRef(new Animated.Value(300)).current;
+
+  React.useEffect(() => {
+    if (visible) {
+      setInternalVisible(true);
+      Animated.parallel([
+        Animated.timing(backdropOpacity, {
+          toValue: 1,
+          duration: 150,
+          useNativeDriver: true,
+        }),
+        Animated.timing(slideAnim, {
+          toValue: 0,
+          duration: 350,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }),
+      ]).start();
+    } else {
+      backdropOpacity.setValue(0);
+      slideAnim.setValue(300);
+      setInternalVisible(false);
+    }
+  }, [visible]);
+
+  const handleClose = () => {
+    Animated.parallel([
+      Animated.timing(backdropOpacity, {
+        toValue: 0,
+        duration: 250,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 300,
+        duration: 280,
+        easing: Easing.in(Easing.cubic),
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      setInternalVisible(false);
+      onClose();
+    });
+  };
   const [step, setStep] = useState(1);
   const [saving, setSaving] = useState(false);
 
@@ -89,7 +136,7 @@ export default function EditPlanModal({
     if (step === 2 && plan) {
       loadExercises();
     }
-  }, [step]);
+  }, [step, plan]);
 
   const loadExercises = async () => {
     if (!plan) return;
@@ -179,7 +226,7 @@ export default function EditPlanModal({
       ]);
 
       onPlanUpdated();
-      onClose();
+      handleClose();
     } catch (err: any) {
       Alert.alert(
         "Fehler",
@@ -193,187 +240,206 @@ export default function EditPlanModal({
 
   return (
     <Modal
-      visible={visible}
-      animationType="slide"
+      visible={internalVisible}
+      animationType="none"
       transparent={true}
-      onRequestClose={onClose}
+      onRequestClose={handleClose}
     >
-      <View style={styles.overlay}>
-        <TouchableOpacity style={styles.backdrop} onPress={onClose} />
-        <KeyboardAvoidingView
-          style={styles.sheet}
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
+      <View style={styles.overlay} pointerEvents="box-none">
+        <Animated.View
+          style={[styles.absoluteFill, { opacity: backdropOpacity }]}
+          pointerEvents="box-none"
         >
-          <View style={styles.handle} />
-          <View style={styles.header}>
-            <Text style={styles.title}>
-              {step === 1 ? "Plan bearbeiten" : "Übungen bearbeiten"}
-            </Text>
-            <TouchableOpacity onPress={onClose}>
-              <Icon name="close" size={24} color={colors.textSecondary} />
-            </TouchableOpacity>
-          </View>
-
-          {step === 1 && (
-            <ScrollView
-              showsVerticalScrollIndicator={false}
-              contentContainerStyle={styles.content}
-              keyboardShouldPersistTaps="handled"
-            >
-              <Text style={styles.label}>Name *</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="z.B. Push Day Workout"
-                placeholderTextColor={colors.textSecondary}
-                value={name}
-                onChangeText={setName}
-              />
-
-              <Text style={styles.label}>Beschreibung</Text>
-              <TextInput
-                style={[styles.input, styles.textArea]}
-                placeholder="Kurze Beschreibung..."
-                placeholderTextColor={colors.textSecondary}
-                value={description}
-                onChangeText={setDescription}
-                multiline
-                numberOfLines={3}
-              />
-
-              <Text style={styles.label}>Sport</Text>
-              <View style={styles.sportFixed}>
-                <Icon
-                  name={
-                    plan?.sport === "gym"
-                      ? "fitness-center"
-                      : "sports-basketball"
-                  }
-                  size={16}
-                  color={colors.primaryBlue}
-                />
-                <Text style={styles.sportFixedText}>
-                  {plan?.sport === "gym" ? "Gym" : "Basketball"}
-                </Text>
-                <Icon name="lock" size={14} color={colors.textSecondary} />
-              </View>
-
-              <Text style={styles.label}>Sessions pro Woche</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="z.B. 4"
-                placeholderTextColor={colors.textSecondary}
-                value={sessionsPerWeek}
-                onChangeText={(value) =>
-                  setSessionsPerWeek(sanitizeSessionsInput(value))
-                }
-                keyboardType="numeric"
-              />
-
-              <TouchableOpacity
-                style={[styles.button, saving && styles.buttonDisabled]}
-                onPress={handleNextStep}
-                disabled={saving}
-              >
-                {saving ? (
-                  <ActivityIndicator size="small" color={colors.white} />
-                ) : (
-                  <>
-                    <Text style={styles.buttonText}>Weiter</Text>
-                    <Icon name="arrow-forward" size={20} color={colors.white} />
-                  </>
-                )}
-              </TouchableOpacity>
-            </ScrollView>
-          )}
-
-          {step === 2 && (
-            <View style={styles.stepTwoContainer}>
-              <View style={styles.sportInfo}>
-                <Icon
-                  name="info-outline"
-                  size={14}
-                  color={colors.textSecondary}
-                />
-                <Text style={styles.sportInfoText}>
-                  Nur {plan?.sport === "gym" ? "Gym" : "Basketball"} Übungen
-                </Text>
-              </View>
-
-              <Text style={styles.selectedCount}>
-                {selectedEids.length} ausgewählt
+          <TouchableOpacity
+            style={styles.fullscreenBackdrop}
+            activeOpacity={1}
+            onPress={handleClose}
+          />
+        </Animated.View>
+        <Animated.View
+          style={[styles.sheet, { transform: [{ translateY: slideAnim }] }]}
+        >
+          <KeyboardAvoidingView
+            style={{ flex: 1 }}
+            behavior={Platform.OS === "ios" ? "padding" : undefined}
+          >
+            <View style={styles.handle} />
+            <View style={styles.header}>
+              <Text style={styles.title}>
+                {step === 1 ? "Plan bearbeiten" : "Übungen bearbeiten"}
               </Text>
-
-              {loadingExercises ? (
-                <ActivityIndicator
-                  size="large"
-                  color={colors.primaryBlue}
-                  style={styles.loader}
-                />
-              ) : (
-                <ScrollView
-                  style={styles.stepTwoScroll}
-                  showsVerticalScrollIndicator={false}
-                  contentContainerStyle={styles.exerciseList}
-                  keyboardShouldPersistTaps="handled"
-                >
-                  {allExercises.map((ex) => {
-                    const selected = selectedEids.includes(ex.eid);
-                    return (
-                      <TouchableOpacity
-                        key={ex.eid}
-                        style={[
-                          styles.exerciseRow,
-                          selected && styles.exerciseRowSelected,
-                        ]}
-                        onPress={() => toggleExercise(ex.eid)}
-                        activeOpacity={0.7}
-                      >
-                        <View style={styles.exerciseIcon}>
-                          <Icon
-                            name="fitness-center"
-                            size={18}
-                            color={selected ? colors.white : colors.primaryBlue}
-                          />
-                        </View>
-                        <Text
-                          style={[
-                            styles.exerciseName,
-                            selected && styles.exerciseNameSelected,
-                          ]}
-                        >
-                          {ex.name}
-                        </Text>
-                        {selected && (
-                          <Icon
-                            name="check-circle"
-                            size={22}
-                            color={colors.white}
-                          />
-                        )}
-                      </TouchableOpacity>
-                    );
-                  })}
-                </ScrollView>
-              )}
-
-              <TouchableOpacity
-                style={[
-                  styles.button,
-                  styles.buttonBottom,
-                  saving && styles.buttonDisabled,
-                ]}
-                onPress={handleSaveExercises}
-                disabled={saving}
-              >
-                {saving ? (
-                  <ActivityIndicator size="small" color={colors.white} />
-                ) : (
-                  <Text style={styles.buttonText}>Speichern</Text>
-                )}
+              <TouchableOpacity onPress={handleClose}>
+                <Icon name="close" size={24} color={colors.textSecondary} />
               </TouchableOpacity>
             </View>
-          )}
-        </KeyboardAvoidingView>
+
+            {step === 1 && (
+              <ScrollView
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={styles.content}
+                keyboardShouldPersistTaps="handled"
+              >
+                <Text style={styles.label}>Name *</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="z.B. Push Day Workout"
+                  placeholderTextColor={colors.textSecondary}
+                  value={name}
+                  onChangeText={setName}
+                />
+
+                <Text style={styles.label}>Beschreibung</Text>
+                <TextInput
+                  style={[styles.input, styles.textArea]}
+                  placeholder="Kurze Beschreibung..."
+                  placeholderTextColor={colors.textSecondary}
+                  value={description}
+                  onChangeText={setDescription}
+                  multiline
+                  numberOfLines={3}
+                />
+
+                <Text style={styles.label}>Sport</Text>
+                <View style={styles.sportFixed}>
+                  <Icon
+                    name={
+                      plan?.sport === "gym"
+                        ? "fitness-center"
+                        : "sports-basketball"
+                    }
+                    size={16}
+                    color={colors.primaryBlue}
+                  />
+                  <Text style={styles.sportFixedText}>
+                    {plan?.sport === "gym" ? "Gym" : "Basketball"}
+                  </Text>
+                  <Icon name="lock" size={14} color={colors.textSecondary} />
+                </View>
+
+                <Text style={styles.label}>Sessions pro Woche</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="z.B. 4"
+                  placeholderTextColor={colors.textSecondary}
+                  value={sessionsPerWeek}
+                  onChangeText={(value) =>
+                    setSessionsPerWeek(sanitizeSessionsInput(value))
+                  }
+                  keyboardType="numeric"
+                />
+
+                <TouchableOpacity
+                  style={[styles.button, saving && styles.buttonDisabled]}
+                  onPress={handleNextStep}
+                  disabled={saving}
+                >
+                  {saving ? (
+                    <ActivityIndicator size="small" color={colors.white} />
+                  ) : (
+                    <>
+                      <Text style={styles.buttonText}>Weiter</Text>
+                      <Icon
+                        name="arrow-forward"
+                        size={20}
+                        color={colors.white}
+                      />
+                    </>
+                  )}
+                </TouchableOpacity>
+              </ScrollView>
+            )}
+
+            {step === 2 && (
+              <View style={styles.stepTwoContainer}>
+                <View style={styles.sportInfo}>
+                  <Icon
+                    name="info-outline"
+                    size={14}
+                    color={colors.textSecondary}
+                  />
+                  <Text style={styles.sportInfoText}>
+                    Nur {plan?.sport === "gym" ? "Gym" : "Basketball"} Übungen
+                  </Text>
+                </View>
+
+                <Text style={styles.selectedCount}>
+                  {selectedEids.length} ausgewählt
+                </Text>
+
+                {loadingExercises ? (
+                  <ActivityIndicator
+                    size="large"
+                    color={colors.primaryBlue}
+                    style={styles.loader}
+                  />
+                ) : (
+                  <ScrollView
+                    style={styles.stepTwoScroll}
+                    showsVerticalScrollIndicator={false}
+                    contentContainerStyle={styles.exerciseList}
+                    keyboardShouldPersistTaps="handled"
+                  >
+                    {allExercises.map((ex) => {
+                      const selected = selectedEids.includes(ex.eid);
+                      return (
+                        <TouchableOpacity
+                          key={ex.eid}
+                          style={[
+                            styles.exerciseRow,
+                            selected && styles.exerciseRowSelected,
+                          ]}
+                          onPress={() => toggleExercise(ex.eid)}
+                          activeOpacity={0.7}
+                        >
+                          <View style={styles.exerciseIcon}>
+                            <Icon
+                              name="fitness-center"
+                              size={18}
+                              color={
+                                selected ? colors.white : colors.primaryBlue
+                              }
+                            />
+                          </View>
+                          <Text
+                            style={[
+                              styles.exerciseName,
+                              selected && styles.exerciseNameSelected,
+                            ]}
+                          >
+                            {ex.name}
+                          </Text>
+                          {selected && (
+                            <Icon
+                              name="check-circle"
+                              size={22}
+                              color={colors.white}
+                            />
+                          )}
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </ScrollView>
+                )}
+
+                <TouchableOpacity
+                  style={[
+                    styles.button,
+                    styles.buttonBottom,
+                    saving && styles.buttonDisabled,
+                  ]}
+                  onPress={handleSaveExercises}
+                  disabled={saving}
+                >
+                  {saving ? (
+                    <ActivityIndicator size="small" color={colors.white} />
+                  ) : (
+                    <Text style={styles.buttonText}>Speichern</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            )}
+          </KeyboardAvoidingView>
+        </Animated.View>
       </View>
     </Modal>
   );
@@ -384,12 +450,13 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "flex-end",
   },
-  backdrop: {
+  fullscreenBackdrop: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: "rgba(0,0,0,0.4)",
+    zIndex: 0,
   },
   sheet: {
-    backgroundColor: colors.background,
+    backgroundColor: colors.white,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     paddingHorizontal: spacing.screenPaddingHorizontal,
@@ -577,5 +644,13 @@ const styles = StyleSheet.create({
   },
   exerciseNameSelected: {
     color: colors.white,
+  },
+  absoluteFill: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 0,
   },
 });

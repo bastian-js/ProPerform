@@ -1,6 +1,5 @@
 import Header from "@/src/components/header";
 import InputField from "@/src/components/input";
-import ForgotPasswordModal from "@/src/components/modals/ForgotPasswordModal";
 import { colors } from "@/src/theme/colors";
 import { spacing } from "@/src/theme/spacing";
 import { typography } from "@/src/theme/typography";
@@ -12,6 +11,7 @@ import * as SecureStore from "expo-secure-store";
 import React from "react";
 import {
   ActivityIndicator,
+  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -32,9 +32,19 @@ export default function LoginScreen() {
   const [password, setPassword] = React.useState("");
   const [stayLoggedIn, setStayLoggedIn] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
-  const [forgotPasswordVisible, setForgotPasswordVisible] =
-    React.useState(false);
   const [loading, setLoading] = React.useState(false);
+
+  const handleForgotPassword = () => {
+    if (!email.trim()) {
+      Alert.alert("Fehler", "Bitte gib zuerst deine E-Mail im Feld ein.");
+      return;
+    }
+
+    Alert.alert(
+      "Bestätigung",
+      `Falls ein Account mit ${email.trim().toLowerCase()} existiert, wurde eine Zurücksetzung angefordert.`,
+    );
+  };
 
   const handleLogin = async () => {
     try {
@@ -77,7 +87,7 @@ export default function LoginScreen() {
       <Header />
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        behavior={Platform.OS === "ios" ? "height" : undefined}
       >
         <ScrollView
           contentContainerStyle={[
@@ -89,7 +99,10 @@ export default function LoginScreen() {
           keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "none"}
         >
           <View
-            style={[styles.headerSection, isCompact ? styles.headerSectionCompact : null]}
+            style={[
+              styles.headerSection,
+              isCompact ? styles.headerSectionCompact : null,
+            ]}
           >
             <Text style={typography.title}>Willkommen zurück</Text>
             <Text style={[typography.body, styles.subheader]}>
@@ -130,7 +143,7 @@ export default function LoginScreen() {
             {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
             <TouchableOpacity
-              onPress={() => setForgotPasswordVisible(true)}
+              onPress={handleForgotPassword}
               style={styles.forgotPasswordWrap}
             >
               <Text style={styles.forgotPasswordText}>Passwort vergessen?</Text>
@@ -138,7 +151,10 @@ export default function LoginScreen() {
           </View>
 
           <View
-            style={[styles.navigation, isCompact ? styles.navigationCompact : null]}
+            style={[
+              styles.navigation,
+              isCompact ? styles.navigationCompact : null,
+            ]}
           >
             <TouchableOpacity
               style={styles.arrowButton}
@@ -167,10 +183,6 @@ export default function LoginScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
-      <ForgotPasswordModal
-        visible={forgotPasswordVisible}
-        onClose={() => setForgotPasswordVisible(false)}
-      />
     </SafeAreaView>
   );
 }

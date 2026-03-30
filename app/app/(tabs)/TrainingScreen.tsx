@@ -1,3 +1,14 @@
+import CreatePlanModal from "@/src/components/modals/CreatePlanModal";
+import EditPlanModal from "@/src/components/modals/EditPlanModal";
+import { useWorkout } from "@/src/context/WorkoutContext";
+import { colors } from "@/src/theme/colors";
+import { spacing } from "@/src/theme/spacing";
+import { typography } from "@/src/theme/typography";
+import api from "@/src/utils/axiosInstance";
+import { MaterialIcons as Icon } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
+import { useFocusEffect } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -11,16 +22,6 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { MaterialIcons as Icon } from "@expo/vector-icons";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { colors } from "@/src/theme/colors";
-import { spacing } from "@/src/theme/spacing";
-import { typography } from "@/src/theme/typography";
-import api from "@/src/utils/axiosInstance";
-import CreatePlanModal from "@/src/components/modals/CreatePlanModal";
-import EditPlanModal from "@/src/components/modals/EditPlanModal";
-import WorkoutModal from "@/src/components/modals/WorkoutModal";
-import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 
 type TrainingPlan = {
   tpid: number;
@@ -64,11 +65,6 @@ export default function TrainingScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
-  const [workoutVisible, setWorkoutVisible] = useState(false);
-  const [selectedPlan, setSelectedPlan] = useState<{
-    id: number;
-    name: string;
-  } | null>(null);
   const [editVisible, setEditVisible] = useState(false);
   const [editPlan, setEditPlan] = useState<TrainingPlan | null>(null);
   const [hasTrainer, setHasTrainer] = useState(false);
@@ -79,9 +75,10 @@ export default function TrainingScreen() {
 
   const tabs = hasTrainer ? ["Eigene Pläne", "Trainer"] : ["Eigene Pläne"];
 
+  const { startWorkout: startWorkoutContext } = useWorkout();
+
   const startWorkout = (plan: TrainingPlan) => {
-    setSelectedPlan({ id: plan.tpid, name: plan.name });
-    setWorkoutVisible(true);
+    startWorkoutContext(plan.tpid, plan.name);
   };
 
   const getUserPlanForTrainingPlan = useCallback(
@@ -260,6 +257,12 @@ export default function TrainingScreen() {
     void loadWorkoutHistory();
   }, [fetchPlans, fetchUserPlans, fetchTrainer, loadWorkoutHistory]);
 
+  useFocusEffect(
+    useCallback(() => {
+      void loadWorkoutHistory();
+    }, [loadWorkoutHistory]),
+  );
+
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={styles.header}>
@@ -341,11 +344,15 @@ export default function TrainingScreen() {
                     >
                       <View style={styles.historyCardTop}>
                         <View style={styles.historyContent}>
-                          <Text style={styles.historyPlanName} numberOfLines={1}>
+                          <Text
+                            style={styles.historyPlanName}
+                            numberOfLines={1}
+                          >
                             {entry.planName}
                           </Text>
                           <Text style={styles.historySets}>
-                            Sets erledigt: {entry.completedSets}/{entry.totalSets}
+                            Sets erledigt: {entry.completedSets}/
+                            {entry.totalSets}
                           </Text>
                         </View>
                         <Text style={styles.historyDate}>
@@ -466,7 +473,9 @@ export default function TrainingScreen() {
                           color={colors.primaryBlue}
                         />
                       </View>
-                      <Text style={styles.sportText}>{plan.sport}</Text>
+                      <Text style={styles.sportText} allowFontScaling={false}>
+                        {plan.sport}
+                      </Text>
                     </View>
 
                     <View style={styles.planContent}>
@@ -515,15 +524,6 @@ export default function TrainingScreen() {
         onPlanUpdated={refreshAllPlans}
       />
 
-      <WorkoutModal
-        visible={workoutVisible}
-        planId={selectedPlan?.id ?? null}
-        planName={selectedPlan?.name ?? ""}
-        onClose={() => {
-          setWorkoutVisible(false);
-          void loadWorkoutHistory();
-        }}
-      />
     </SafeAreaView>
   );
 }
@@ -659,8 +659,10 @@ const styles = StyleSheet.create({
   leftBlock: {
     alignItems: "center",
     justifyContent: "center",
-    width: 60,
+    minWidth: 90,
+    maxWidth: 140,
     gap: 2,
+    flexShrink: 0,
   },
   planIcon: {
     width: 40,
@@ -677,6 +679,10 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     paddingTop: spacing.xs,
     textTransform: "capitalize",
+    flexShrink: 1,
+    flexGrow: 1,
+    minWidth: 0,
+    textAlign: "center",
   },
   planContent: {
     flex: 1,

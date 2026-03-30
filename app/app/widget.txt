@@ -1,0 +1,68 @@
+import { Image, Text, VStack } from '@expo/ui/swift-ui';
+import { font, foregroundStyle, padding } from '@expo/ui/swift-ui/modifiers';
+import { createLiveActivity, type LiveActivityEnvironment } from 'expo-widgets';
+
+// Definiere die Props (Daten) die deine Live Activity anzeigen soll
+type DeliveryActivityProps = {
+  etaMinutes: number; // Verbleibende Minuten bis zur Lieferung
+  status: string;     // Statustext z.B. "Unterwegs"
+};
+
+// Die Komponente wird mit dem 'widget' Directive markiert
+// Sie bekommt deine Props + ein Environment-Objekt (z.B. colorScheme)
+const DeliveryActivity = (props: DeliveryActivityProps, environment: LiveActivityEnvironment) => {
+  'widget'; // Pflicht! Markiert diese Funktion als Widget
+
+  // Farbe je nach Hell-/Dunkel-Modus anpassen
+  const accentColor = environment.colorScheme === 'dark' ? '#FFFFFF' : '#007AFF';
+
+  // Rückgabe: ein Objekt mit den verschiedenen Layout-Slots
+  return {
+    // Lock Screen Banner – Hauptansicht auf dem Sperrbildschirm
+    banner: (
+      <VStack modifiers={[padding({ all: 12 })]}>
+        <Text modifiers={[font({ weight: 'bold' }), foregroundStyle(accentColor)]}>
+          {props.status}
+        </Text>
+        <Text>Estimated arrival: {props.etaMinutes} minutes</Text>
+      </VStack>
+    ),
+
+    // Dynamic Island kompakt – LINKS (z.B. ein Icon)
+    compactLeading: <Image systemName="box.truck.fill" color={accentColor} />,
+
+    // Dynamic Island kompakt – RECHTS (z.B. die Minuten)
+    compactTrailing: <Text>{props.etaMinutes} min</Text>,
+
+    // Minimale Ansicht – wenn zwei Activities gleichzeitig aktiv sind
+    minimal: <Image systemName="box.truck.fill" color={accentColor} />,
+
+    // Dynamic Island erweitert – linke Seite
+    expandedLeading: (
+      <VStack modifiers={[padding({ all: 12 })]}>
+        <Image systemName="box.truck.fill" color={accentColor} />
+        <Text modifiers={[font({ size: 12 })]}>Delivering</Text>
+      </VStack>
+    ),
+
+    // Dynamic Island erweitert – rechte Seite
+    expandedTrailing: (
+      <VStack modifiers={[padding({ all: 12 })]}>
+        <Text modifiers={[font({ weight: 'bold', size: 20 })]}>{props.etaMinutes}</Text>
+        <Text modifiers={[font({ size: 12 })]}>minutes</Text>
+      </VStack>
+    ),
+
+    // Dynamic Island erweitert – unterer Bereich
+    expandedBottom: (
+      <VStack modifiers={[padding({ all: 12 })]}>
+        <Text>Driver: John Smith</Text>
+        <Text>Order #12345</Text>
+      </VStack>
+    ),
+  };
+};
+
+// createLiveActivity erstellt eine Factory zum Starten/Verwalten der Activity
+// Der Name ('DeliveryActivity') muss mit dem 'name'-Feld in der app.json übereinstimmen
+export default createLiveActivity('DeliveryActivity', DeliveryActivity);

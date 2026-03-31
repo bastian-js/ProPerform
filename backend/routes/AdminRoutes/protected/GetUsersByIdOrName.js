@@ -2,13 +2,10 @@ import express from "express";
 import { requireAuth } from "../../../middleware/auth.js";
 import { requireRole } from "../../../middleware/role.js";
 import { db } from "../../../db.js";
-import { sendPush } from "../../../helpers/push.js";
 
 const router = express.Router();
 
-const availableTargetTypes = ["all", "single"];
-
-router.post(
+router.get(
   "/users/:idOrName",
   requireAuth,
   requireRole("owner"),
@@ -31,7 +28,7 @@ router.post(
       );
       return res.json(users);
     } else {
-      // id 
+      // id
       const [users] = await db.query(
         `
           SELECT uid, firstname, email FROM users WHERE uid = ?

@@ -12,7 +12,7 @@ router.get("/me", requireAuth, requireRole("user"), async (req, res) => {
   try {
     const [rows] = await db.query(
       `SELECT tr.id, tr.status, tr.created_at,
-              t.tid, t.name
+              t.tid, t.firstname, t.lastname
        FROM trainer_requests tr
        JOIN trainers t ON tr.tid = t.tid
        WHERE tr.uid = ?
@@ -37,7 +37,7 @@ router.get(
     try {
       const [rows] = await db.query(
         `SELECT tr.id, tr.created_at,
-              u.uid, u.firstname, u.lastname, u.email
+              u.uid, u.firstname, u.email
        FROM trainer_requests tr
        JOIN users u ON tr.uid = u.uid
        WHERE tr.tid = ? AND tr.status = 'pending'
@@ -59,7 +59,7 @@ router.get("/", requireAuth, requireRole("trainer"), async (req, res) => {
   try {
     const [rows] = await db.query(
       `SELECT tr.id, tr.status, tr.created_at,
-              u.uid, u.firstname, u.lastname
+              u.uid, u.firstname
        FROM trainer_requests tr
        JOIN users u ON tr.uid = u.uid
        WHERE tr.tid = ?

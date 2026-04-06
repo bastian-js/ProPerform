@@ -111,6 +111,14 @@ router.post(
         });
       }
 
+      const [trainerCode] = await db.execute(
+        `
+        SELECT tid, invite_code FROM trainers
+        WHERE tid = ?
+        `,
+        [trainer.tid],
+      );
+
       const token = jwt.sign(
         { tid: trainer.tid, role: "trainer" },
         process.env.JWT_SECRET,
@@ -123,6 +131,7 @@ router.post(
         message: "login successful.",
         token,
         tid: trainer.tid,
+        code: trainerCode[0].invite_code,
         role: "trainer",
       });
     } catch (error) {

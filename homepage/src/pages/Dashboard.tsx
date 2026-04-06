@@ -409,8 +409,8 @@ export default function Dashboard() {
         body: JSON.stringify({
           name: exerciseForm.name.trim(),
           description: exerciseForm.description.trim() || undefined,
-          video_media_id: exerciseVideoMedia.mid,
-          thumbnail_media_id: exerciseThumbnailMedia.mid,
+          video_mid: Number(exerciseVideoMedia.mid),
+          thumbnail_mid: Number(exerciseThumbnailMedia.mid),
           sid: exerciseForm.sid.trim(),
           dlid: exerciseForm.dlid.trim(),
         }),

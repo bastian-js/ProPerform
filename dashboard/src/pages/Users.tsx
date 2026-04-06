@@ -1,5 +1,11 @@
 import { useEffect, useState } from "react";
-import { Trash, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  Trash,
+  ChevronLeft,
+  ChevronRight,
+  ChevronLast,
+  ChevronFirst,
+} from "lucide-react";
 import { apiFetch } from "../helpers/apiFetch";
 
 export default function Users() {
@@ -105,13 +111,11 @@ export default function Users() {
   };
 
   return (
-    <div className="flex flex-col items-center w-full min-h-screen overflow-y-auto">
+    <div className="flex flex-col items-center w-full min-h-screen overflow-y-auto mt-5">
       <div className="bg-gray-800 rounded-2xl shadow-lg p-8 w-[90%] max-w-6xl text-center">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-4xl font-bold text-blue-400 mx-auto">
-            Benutzerverwaltung
-          </h1>
-        </div>
+        <h1 className="text-4xl font-bold text-blue-400 mb-6 text-start">
+          Benutzerverwaltung
+        </h1>
 
         <table className="w-full border-separate border-spacing-y-2">
           <thead>
@@ -157,7 +161,15 @@ export default function Users() {
           </tbody>
         </table>
 
-        <div className="flex justify-center items-center gap-6 mt-8">
+        <div className="flex justify-center items-center gap-4 mt-8">
+          <button
+            disabled={usersPage === 1}
+            onClick={() => setUsersPage(1)}
+            className="p-2 rounded-lg bg-gray-700 hover:bg-blue-600 disabled:bg-gray-800 disabled:text-gray-500 text-blue-400 transition duration-200 disabled:cursor-not-allowed cursor-pointer"
+          >
+            <ChevronFirst className="w-5 h-5" />
+          </button>
+
           <button
             disabled={usersPage === 1}
             onClick={() => setUsersPage((p) => p - 1)}
@@ -181,12 +193,20 @@ export default function Users() {
           >
             <ChevronRight className="w-5 h-5" />
           </button>
+
+          <button
+            disabled={usersPage === totalUsersPages}
+            onClick={() => setUsersPage(totalUsersPages)}
+            className="p-2 rounded-lg bg-gray-700 hover:bg-blue-600 disabled:bg-gray-800 disabled:text-gray-500 text-blue-400 transition duration-200 disabled:cursor-not-allowed cursor-pointer"
+          >
+            <ChevronLast className="w-5 h-5" />
+          </button>
         </div>
       </div>
 
       {/* TRAINER TABLE */}
       <div className="bg-gray-800 rounded-2xl shadow-lg p-8 w-[90%] mt-8 max-w-6xl">
-        <h1 className="text-4xl font-bold text-blue-400 mb-6 text-center">
+        <h1 className="text-4xl font-bold text-blue-400 mb-6 text-start">
           Trainerverwaltung
         </h1>
 
@@ -234,7 +254,15 @@ export default function Users() {
           </tbody>
         </table>
 
-        <div className="flex justify-center items-center gap-6 mt-8">
+        <div className="flex justify-center items-center gap-4 mt-8">
+          <button
+            disabled={trainersPage === 1}
+            onClick={() => setTrainersPage(1)}
+            className="p-2 rounded-lg bg-gray-700 hover:bg-blue-600 disabled:bg-gray-800 disabled:text-gray-500 text-blue-400 transition duration-200 disabled:cursor-not-allowed cursor-pointer"
+          >
+            <ChevronFirst className="w-5 h-5" />
+          </button>
+
           <button
             disabled={trainersPage === 1}
             onClick={() => setTrainersPage((p) => p - 1)}
@@ -260,10 +288,18 @@ export default function Users() {
           >
             <ChevronRight className="w-5 h-5" />
           </button>
+
+          <button
+            disabled={trainersPage === totalTrainerPages}
+            onClick={() => setTrainersPage(totalTrainerPages)}
+            className="p-2 rounded-lg bg-gray-700 hover:bg-blue-600 disabled:bg-gray-800 disabled:text-gray-500 text-blue-400 transition duration-200 disabled:cursor-not-allowed cursor-pointer"
+          >
+            <ChevronLast className="w-5 h-5" />
+          </button>
         </div>
       </div>
 
-      <p className="text-center text-gray-500 text-sm mt-10">
+      <p className="text-center text-gray-500 text-sm mt-10 mb-10">
         Nur angemeldete Admins können Benutzer einsehen.
       </p>
     </div>

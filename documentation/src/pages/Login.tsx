@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { apiFetch } from "../helpers/apiFetch";
+import { useNavigate } from "react-router-dom";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -10,6 +11,8 @@ export default function Login() {
   const [resetEmail, setResetEmail] = useState("");
   const [resetLoading, setResetLoading] = useState(false);
   const [resetDone, setResetDone] = useState(false);
+
+  const navigate = useNavigate();
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
@@ -28,7 +31,7 @@ export default function Login() {
     if (res.ok && data.access_token) {
       localStorage.setItem("token", data.access_token);
       localStorage.setItem("refresh_token", data.refresh_token);
-      window.location.href = "/";
+      navigate("/");
     } else {
       alert(data.error || "Login fehlgeschlagen");
     }

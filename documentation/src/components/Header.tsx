@@ -9,10 +9,18 @@ export default function Header() {
     try {
       const res = await fetch("https://api.properform.app/auth/logout", {
         method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({
           refresh_token: localStorage.getItem("refresh_token"),
         }),
       });
+
+      let data: any = {};
+      try {
+        data = await res.json();
+      } catch {}
 
       if (res.ok) {
         localStorage.removeItem("token");
@@ -20,6 +28,8 @@ export default function Header() {
         window.location.href = "/login";
       } else {
         alert("Logout failed. Please try again.");
+        console.error(res.status);
+        console.error(data.error);
       }
     } catch (err) {
       console.error("Logout error:", err);

@@ -31,15 +31,9 @@ router.get("/", requireAuth, async (req, res) => {
       [userId],
     );
 
-    if (plans.length === 0) {
-      return res
-        .status(404)
-        .json({ message: "no training plans found for this user" });
-    }
-
     res.status(200).json({
       message: "user training plans fetched successfully",
-      plans: plans,
+      plans,
     });
   } catch (error) {
     console.error("error fetching user training plans:", error);
